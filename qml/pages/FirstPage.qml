@@ -122,7 +122,7 @@ BasePage {
                     id: infoButton
                     text: qsTr("About")
                     onClicked: instantiatePage(Qt.resolvedUrl("InfoPage.qml"))
-                    font.pixelSize: FontUtils.sizeToPixels("large")
+                    font.pixelSize: settingsButton.font.pixelSize
 
                     LuneOSButton.mainColor: LuneOSButton.blueColor
                 }
