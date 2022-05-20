@@ -1,4 +1,5 @@
 #include <QPainter>
+#include <QLocale>
 
 #include "plotwidget.h"
 
@@ -36,7 +37,7 @@ void PlotWidget::paint(QPainter *painter)
         int ypos = (1.0 - (i + 0.5) / NUM_SCALE_LINES) * this->height() - 1;
 
         QString text = QLocale::system().toString(v, 'g', 3);
-        int startX = fontMetrics.width(text) + 5;
+        int startX = fontMetrics.boundingRect(text).width() + 5;
 
         if(startX > minX) {
             minX = startX;

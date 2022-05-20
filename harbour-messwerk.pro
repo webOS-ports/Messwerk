@@ -14,8 +14,15 @@ TARGET = harbour-messwerk
 
 QT += sensors positioning gui qml quick
 
-QMAKE_CXXFLAGS += -std=c++0x
-QMAKE_LFLAGS += -std=c++0x
+equals(QT_MAJOR_VERSION, 5):{
+    QMAKE_CXXFLAGS += -std=c++0x
+    QMAKE_LFLAGS += -std=c++0x
+}
+
+equals(QT_MAJOR_VERSION, 6):{
+    QMAKE_CXXFLAGS += -std=c++1z
+    QMAKE_LFLAGS += -std=c++1z
+}
 
 SOURCES += src/Messwerk.cpp \
     src/accelerometer.cpp \

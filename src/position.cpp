@@ -45,14 +45,14 @@ void Position::updateMaidenhead(void)
 
     m_maidenhead = "";
 
-    m_maidenhead += ('A' + fieldLon);
-    m_maidenhead += ('A' + fieldLat);
+    m_maidenhead += QChar('A' + fieldLon);
+    m_maidenhead += QChar('A' + fieldLat);
 
-    m_maidenhead += ('0' + squareLon);
-    m_maidenhead += ('0' + squareLat);
+    m_maidenhead += QChar('0' + squareLon);
+    m_maidenhead += QChar('0' + squareLat);
 
-    m_maidenhead += ('a' + subSquareLon);
-    m_maidenhead += ('a' + subSquareLat);
+    m_maidenhead += QChar('a' + subSquareLon);
+    m_maidenhead += QChar('a' + subSquareLat);
 }
 
 Position::Position(QObject *parent) :
