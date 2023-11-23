@@ -48,9 +48,9 @@ void SatelliteStrengthWidget::paint(QPainter *painter)
     QString maxLabel(QLocale::system().toString(maxSignal));
 
     // determine number of label lines to use
-    int scaleLabelWidth = qMax(fontMetrics.width(minLabel), fontMetrics.width(maxLabel));
+    int scaleLabelWidth = qMax(fontMetrics.boundingRect(minLabel).width(), fontMetrics.boundingRect(maxLabel).width());
 
-    int maxLabelWidth = fontMetrics.width("123");
+    int maxLabelWidth = fontMetrics.boundingRect("123").width();
 
     int numSatellites = m_satelliteInfo->allSatellites().size();
     int widthPerBar = (this->width() - scaleLabelWidth) / numSatellites;

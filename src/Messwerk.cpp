@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 {
     int result = 0;
 
-    qputenv("QT_QUICK_CONTROLS_STYLE", "LuneOS");
+    qputenv("QT_QUICK_CONTROLS_STYLE", "QtQuick.Controls.LuneOS");
 
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;

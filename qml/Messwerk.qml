@@ -32,8 +32,9 @@ import QtQuick 2.9
 import QtQuick.Controls 2.9
 
 import "pages"
+import Eos.Window 0.1
 
-ApplicationWindow
+WebOSWindow 
 {
     // define some decent default size
     height: 600
