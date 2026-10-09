@@ -1,86 +1,57 @@
+/*
+ * (c) 2026 Herman van Hazendonk <github.com@herrie.org>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 3, as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranties of
+ * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import QtQuick 2.9
-import QtQuick.Controls 2.9
-import harbour.messwerk.MesswerkWidgets 1.0
+import QtQuick.Controls 2.2
+
+import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
-import "CustomTheme"
+import "../Common"
 
 BasePage {
     id: page
-    headerText: "Pressure"
 
-    function formatNumber(n) {
-        return '<b>' + n.toFixed(3) + ' Pa</b>';
+    title: "Pressure"
+    explanation: PressureSensor.available ? "" : "This device has no pressure sensor."
+
+    Component.onCompleted: PressureSensor.activate(Constants.PART_PAGE)
+    Component.onDestruction: PressureSensor.deactivate(Constants.PART_PAGE)
+
+    Connections {
+        target: PressureSensor
+        function onReadingUpdated() {
+            pressureRow.addValue(PressureSensor.pressure);
+        }
     }
 
-    function updatePressurePlot() {
-        pressureplot.addValue(pressuresensor.pressure);
-        pressureplot.update();
-    }
+    SettingsPageContent {
+        GroupBox {
+            width: parent.width
+            title: "Air pressure"
 
-    Component.onCompleted: {
-        pressuresensor.activate(Constants.PART_PAGE);
-        pressuresensor.pressureChanged.connect(updatePressurePlot);
-    }
-
-    Component.onDestruction: {
-        pressuresensor.pressureChanged.disconnect(updatePressurePlot);
-        pressuresensor.deactivate(Constants.PART_PAGE)
-    }
-
-    // To enable PullDownMenu, place our content in a SilicaFlickable
-    Flickable {
-        anchors.fill: parent
-/*
-        // PullDownMenu and PushUpMenu must be declared in SilicaFlickable, SilicaListView or SilicaGridView
-        PullDownMenu {
-            MenuItem {
-                function toggleLogging() {
-                    if(pressuresensor.isLogging) {
-                        pressuresensor.stopLogging();
-                    } else {
-                        pressuresensor.startLogging();
-                    }
-                }
-
-                text: (pressuresensor.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: toggleLogging()
+            PlotRow {
+                id: pressureRow
+                label: "Pressure"
+                value: PressureSensor.pressure.toFixed(1) + " Pa"
             }
         }
-*/
-        contentHeight: column.height
-        // cut out-of-bound graphics
-        clip: true
 
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
-        Column {
-            id: column
-
-            width: page.width
-            spacing: Theme.paddingLarge
-
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: pressurelabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Pressure: ' + page.formatNumber(pressuresensor.pressure)
-                }
-                PlotWidget {
-                    id: pressureplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
+        LoggingGroup {
+            sensor: PressureSensor
         }
     }
 }
-
-

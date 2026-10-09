@@ -4,8 +4,8 @@
 #include <QObject>
 #include <QGeoSatelliteInfo>
 #include <QGeoSatelliteInfoSource>
-#include <QSet>
 #include <QMap>
+#include <QSet>
 #include <QFile>
 
 #include "activateable.h"
@@ -15,75 +15,89 @@ class SatelliteInfo : public QObject, public Activateable
     Q_OBJECT
 
     Q_PROPERTY(bool isLogging READ isLogging NOTIFY isLoggingChanged)
+    Q_PROPERTY(QString logFileName READ logFileName NOTIFY isLoggingChanged)
+    Q_PROPERTY(bool available READ available CONSTANT)
+    Q_PROPERTY(int numberOfSatellites READ getNumberOfSatellites NOTIFY newDataAvailable)
+    Q_PROPERTY(int numberOfUsedSatellites READ getNumberOfUsedSatellites NOTIFY newDataAvailable)
 
 public:
     struct SatelliteData {
-        qreal  azimuth;         // in Degrees
-        qreal  elevation;       // in Degrees
-        int    signalStrength;  // in dB
-        bool   inUse;
-        qint64 lastUpdated;     // in milliseconds
-        QGeoSatelliteInfo::SatelliteSystem satelliteSystem;
+        int    id = 0;               // PRN, only unique within one system
+        qreal  azimuth = 0;          // in Degrees
+        qreal  elevation = 0;        // in Degrees
+        int    signalStrength = 0;   // in dB
+        bool   inUse = false;
+        qint64 lastUpdated = 0;      // in milliseconds
+        QGeoSatelliteInfo::SatelliteSystem satelliteSystem = QGeoSatelliteInfo::Undefined;
 
         void updateFrom(const SatelliteData& other);
+
+        // "G12", "R05", ...: the system letter used in RINEX and NMEA
+        QString label() const;
     };
 
-    typedef int SatelliteID;
+    // The system in the upper bits and the PRN in the lower ones: GPS 5 and
+    // GLONASS 5 are two different satellites
+    typedef qint64 SatelliteID;
+    typedef QMap<SatelliteID, SatelliteData> SatelliteMap;
 
     static const qint64 TIMEOUT = 10000; // timeout of satellites in milliseconds
 
 private:
-    typedef QMap<SatelliteID, SatelliteData> SatelliteMap;
     typedef QSet<SatelliteID> SatelliteIDSet;
 
     SatelliteMap m_satellites;
 
     SatelliteIDSet m_used;
-    SatelliteIDSet m_unused;
-    SatelliteIDSet m_all;
 
-    qreal m_minSignal;
-    qreal m_maxSignal;
+    qreal m_minSignal = 0;
+    qreal m_maxSignal = 1;
 
-    QGeoSatelliteInfoSource *m_source;
-    bool                     m_sourceActive;
+    // null when the device has no satellite source at all
+    QGeoSatelliteInfoSource *m_source = nullptr;
+    bool                     m_sourceActive = false;
 
     QFile m_logFile;
 
-    void updateMinMax(void);
-    void logData(void);
+    static SatelliteID makeId(const QGeoSatelliteInfo &sat);
+    static SatelliteData dataFrom(const QGeoSatelliteInfo &sat);
+
+    void mergeSatellite(const QGeoSatelliteInfo &sat);
+    void updateUsedFlags();
+    void updateMinMax();
+    void logData();
 
 public:
-    explicit SatelliteInfo(QObject *parent = 0);
-    ~SatelliteInfo();
+    explicit SatelliteInfo(QObject *parent = nullptr);
 
-    int getNumberOfSatellites(void) { return m_satellites.size(); }
-    const SatelliteData& operator[] (SatelliteID idx) { return m_satellites[idx]; }
+    int getNumberOfSatellites() const { return m_satellites.size(); }
+    int getNumberOfUsedSatellites() const;
 
-    const SatelliteIDSet& usedSatellites(void) { return m_used; }
-    const SatelliteIDSet& unusedSatellites(void) { return m_unused; }
-    const SatelliteIDSet& allSatellites(void) { return m_all; }
+    // Only valid until the next update; iterate it, do not keep it
+    const SatelliteMap &satellites() const { return m_satellites; }
 
-    qreal minSignal(void) { return m_minSignal; }
-    qreal maxSignal(void) { return m_maxSignal; }
+    qreal minSignal() const { return m_minSignal; }
+    qreal maxSignal() const { return m_maxSignal; }
 
-    Q_INVOKABLE void activate(unsigned requestingPart);
-    Q_INVOKABLE void deactivate(unsigned requestingPart);
+    bool available() const { return m_source != nullptr; }
 
-    Q_INVOKABLE void startLogging(void);
-    Q_INVOKABLE void stopLogging(void);
+    Q_INVOKABLE void activate(unsigned requestingPart) override;
+    Q_INVOKABLE void deactivate(unsigned requestingPart) override;
 
-    bool isLogging(void) { return isPartActive(Activateable::PART_LOGGING); }
+    Q_INVOKABLE void startLogging();
+    Q_INVOKABLE void stopLogging();
+
+    bool isLogging() const { return isPartActive(Activateable::PART_LOGGING); }
+    QString logFileName() const { return isLogging() ? m_logFile.fileName() : QString(); }
 
 signals:
-    void newDataAvailable(void);
+    void newDataAvailable();
     void isLoggingChanged(bool);
+    void loggingFailed(const QString &errorString);
 
 public slots:
     void setSatellitesInUse(const QList<QGeoSatelliteInfo> &satellites);
     void setSatellitesInView(const QList<QGeoSatelliteInfo> &satellites);
-
-
 };
 
 #endif // SATELLITEINFO_H

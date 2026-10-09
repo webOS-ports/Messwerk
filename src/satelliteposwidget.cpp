@@ -1,12 +1,32 @@
 #include <QPainter>
-#include <QDateTime>
-#include <qmath.h>
+#include <QLocale>
+#include <QtMath>
 
 #include "satelliteposwidget.h"
 
 SatellitePosWidget::SatellitePosWidget(QQuickItem *parent) :
     QQuickPaintedItem(parent)
 {
+}
+
+void SatellitePosWidget::setSatelliteInfo(SatelliteInfo *si)
+{
+    if(m_satelliteInfo == si) {
+        return;
+    }
+
+    if(m_satelliteInfo) {
+        disconnect(m_satelliteInfo, nullptr, this, nullptr);
+    }
+
+    m_satelliteInfo = si;
+
+    if(m_satelliteInfo) {
+        connect(m_satelliteInfo, &SatelliteInfo::newDataAvailable, this, [this]() { update(); });
+    }
+
+    emit satelliteInfoChanged();
+    update();
 }
 
 void SatellitePosWidget::paint(QPainter *painter)
@@ -40,7 +60,8 @@ void SatellitePosWidget::paint(QPainter *painter)
     painter->drawEllipse(center, (int)(0.6667 * radius), (int)(0.6667 * radius));
     painter->drawEllipse(center, (int)(0.3333 * radius), (int)(0.3333 * radius));
 
-    QPoint offsetEnd(0,  radius);
+    // up, like the satellites below: azimuth 0 is north
+    QPoint offsetEnd(0, -radius);
 
     for(int angle = 0; angle < 360; angle += 45) {
         QTransform t;
@@ -62,6 +83,9 @@ void SatellitePosWidget::paint(QPainter *painter)
         return;
     }
 
+    qreal minSignal = m_satelliteInfo->minSignal();
+    qreal maxSignal = m_satelliteInfo->maxSignal();
+
     QBrush usedBrush(m_usedColor);
     QBrush visibleBrush(m_visibleColor);
 
@@ -71,8 +95,7 @@ void SatellitePosWidget::paint(QPainter *painter)
     usedPen.setColor(m_usedColor);
     visiblePen.setColor(m_visibleColor);
 
-    for(int id: m_satelliteInfo->allSatellites()) {
-        const SatelliteInfo::SatelliteData &sd = (*m_satelliteInfo)[id];
+    for(const SatelliteInfo::SatelliteData &sd: m_satelliteInfo->satellites()) {
 
         // determine where to render the satellite by rotating and scaling the "north" unit vector
         QTransform t;
@@ -92,9 +115,6 @@ void SatellitePosWidget::paint(QPainter *painter)
 
         painter->setPen(Qt::NoPen); // clear pen, no border
 
-        qreal minSignal = m_satelliteInfo->minSignal();
-        qreal maxSignal = m_satelliteInfo->maxSignal();
-
         qreal sizeFactor = (sd.signalStrength - minSignal) / (maxSignal - minSignal);
 
         qreal satRadius = minSize + sizeFactor * (maxSize - minSize);
@@ -109,8 +129,7 @@ void SatellitePosWidget::paint(QPainter *painter)
             painter->setPen(visiblePen);
         }
 
-        QString text = QLocale::system().toString(id);
-        painter->drawText(QRect(satCenter.x() + satRadius + 2, satCenter.y(), 0, 0), Qt::AlignVCenter | Qt::AlignLeft | Qt::TextDontClip, text);
+        painter->drawText(QRectF(satCenter.x() + satRadius + 2, satCenter.y(), 0, 0), Qt::AlignVCenter | Qt::AlignLeft | Qt::TextDontClip, sd.label());
     }
 }
 
@@ -119,5 +138,6 @@ void SatellitePosWidget::setnorthDirection(qreal arg)
     if (m_northDirection != arg) {
         m_northDirection = arg;
         emit northDirectionChanged(arg);
+        update();
     }
 }

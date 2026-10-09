@@ -11,21 +11,24 @@ class Proximity : public Sensor
 
     Q_PROPERTY(bool detected READ detected NOTIFY detectedChanged)
 
-    private:
-        bool m_detected;
+private:
+    bool m_detected = false;
 
-    public:
-        explicit Proximity(bool updateInternally = false, QObject *parent = NULL);
-        ~Proximity();
+    QProximityReading *currentReading() const;
 
-        bool detected(void) const { return m_detected; }
+public:
+    explicit Proximity(bool updateInternally = false, QObject *parent = nullptr);
 
-    public slots:
-        void refresh(void);
-        void logValues(void);
+    bool detected() const { return m_detected; }
 
-    signals:
-        void detectedChanged(void);
+public slots:
+    void refresh() override;
+
+protected slots:
+    void logValues() override;
+
+signals:
+    void detectedChanged();
 };
 
 #endif // PROXIMITY_H

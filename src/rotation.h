@@ -13,27 +13,30 @@ class Rotation : public Sensor
     Q_PROPERTY(qreal ry READ ry NOTIFY ryChanged)
     Q_PROPERTY(qreal rz READ rz NOTIFY rzChanged)
 
-    private:
-        qreal m_rx;
-        qreal m_ry;
-        qreal m_rz;
+private:
+    qreal m_rx = 0;
+    qreal m_ry = 0;
+    qreal m_rz = 0;
 
-    public:
-        explicit Rotation(bool updateInternally = false, QObject *parent = NULL);
-        ~Rotation();
+    QRotationReading *currentReading() const;
 
-        qreal rx(void) const { return m_rx; }
-        qreal ry(void) const { return m_ry; }
-        qreal rz(void) const { return m_rz; }
+public:
+    explicit Rotation(bool updateInternally = false, QObject *parent = nullptr);
 
-    public slots:
-        void refresh(void);
-        void logValues(void);
+    qreal rx() const { return m_rx; }
+    qreal ry() const { return m_ry; }
+    qreal rz() const { return m_rz; }
 
-    signals:
-        void rxChanged(void);
-        void ryChanged(void);
-        void rzChanged(void);
+public slots:
+    void refresh() override;
+
+protected slots:
+    void logValues() override;
+
+signals:
+    void rxChanged();
+    void ryChanged();
+    void rzChanged();
 };
 
 #endif // ROTATION_H

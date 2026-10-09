@@ -1,152 +1,86 @@
+/*
+ * (c) 2026 Herman van Hazendonk <github.com@herrie.org>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 3, as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranties of
+ * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import QtQuick 2.9
-import QtQuick.Controls 2.9
-import harbour.messwerk.MesswerkWidgets 1.0
+import QtQuick.Controls 2.2
+
+import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
-import "CustomTheme"
+import "../Common"
 
 BasePage {
     id: page
-    headerText: "Magnetometer"
 
+    title: "Magnetometer"
+    explanation: Magnetometer.available ? "" : "This device has no magnetometer."
+
+    // QMagnetometer reports Tesla
     function formatNumber(n) {
-        n *= 1e3;
-
-        return '<b>' + n.toFixed(4) + ' mT</b>';
+        return (n * 1e3).toFixed(4) + " mT";
     }
 
-    function formatPercentage(n) {
-        n *= 100;
+    Component.onCompleted: Magnetometer.activate(Constants.PART_PAGE)
+    Component.onDestruction: Magnetometer.deactivate(Constants.PART_PAGE)
 
-        return '<b>' + n.toFixed(0) + ' %</b>';
+    Connections {
+        target: Magnetometer
+        function onReadingUpdated() {
+            xRow.addValue(Magnetometer.mx);
+            yRow.addValue(Magnetometer.my);
+            zRow.addValue(Magnetometer.mz);
+        }
     }
 
-    function updateXPlot() {
-        xplot.addValue(magnetometer.mx);
-        xplot.update();
-    }
+    SettingsPageContent {
+        GroupBox {
+            width: parent.width
+            title: "Magnetic flux density"
 
-    function updateYPlot() {
-        yplot.addValue(magnetometer.my);
-        yplot.update();
-    }
+            Column {
+                width: parent.width
 
-    function updateZPlot() {
-        zplot.addValue(magnetometer.mz);
-        zplot.update();
-    }
-
-    Component.onCompleted: {
-        magnetometer.activate(Constants.PART_PAGE);
-        magnetometer.mxChanged.connect(updateXPlot);
-        magnetometer.myChanged.connect(updateYPlot);
-        magnetometer.mzChanged.connect(updateZPlot);
-    }
-
-    Component.onDestruction: {
-        magnetometer.mxChanged.disconnect(updateXPlot);
-        magnetometer.myChanged.disconnect(updateYPlot);
-        magnetometer.mzChanged.disconnect(updateZPlot);
-        magnetometer.deactivate(Constants.PART_PAGE);
-    }
-
-    // To enable PullDownMenu, place our content in a SilicaFlickable
-    Flickable {
-        anchors.fill: parent
-
-        contentHeight: column.height
-        // cut out-of-bound graphics
-        clip: true
-/*
-        PullDownMenu {
-            MenuItem {
-                function toggleLogging() {
-                    if(magnetometer.isLogging) {
-                        magnetometer.stopLogging();
-                    } else {
-                        magnetometer.startLogging();
-                    }
+                PlotRow {
+                    id: xRow
+                    label: "X"
+                    value: page.formatNumber(Magnetometer.mx)
                 }
-
-                text: (magnetometer.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: toggleLogging()
+                PlotRow {
+                    id: yRow
+                    label: "Y"
+                    value: page.formatNumber(Magnetometer.my)
+                }
+                PlotRow {
+                    id: zRow
+                    label: "Z"
+                    value: page.formatNumber(Magnetometer.mz)
+                }
+                HorizontalSeparator {
+                    width: parent.width
+                }
+                LabelAndValue {
+                    width: parent.width
+                    label: "Calibration"
+                    value: (Magnetometer.precision * 100).toFixed(0) + " %"
+                }
             }
         }
-*/
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
-        Column {
-            id: column
 
-            width: page.width
-            spacing: Theme.paddingLarge
-
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: xlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'X: ' + page.formatNumber(magnetometer.mx)
-                }
-                PlotWidget {
-                    id: xplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: ylabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Y: ' + page.formatNumber(magnetometer.my)
-                }
-                PlotWidget {
-                    id: yplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: zlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Z: ' + page.formatNumber(magnetometer.mz)
-                }
-                PlotWidget {
-                    id: zplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Label {
-                id: precisionlabel
-                font.pixelSize: Theme.fontSizeLarge
-                anchors.right: parent.right
-                anchors.rightMargin: Theme.paddingLarge
-                text: 'Precision: ' + page.formatPercentage(magnetometer.precision)
-            }
+        LoggingGroup {
+            sensor: Magnetometer
         }
     }
 }
-
-

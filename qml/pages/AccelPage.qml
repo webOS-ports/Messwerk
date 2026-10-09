@@ -1,182 +1,117 @@
+/*
+ * (c) 2026 Herman van Hazendonk <github.com@herrie.org>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 3, as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranties of
+ * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import QtQuick 2.9
-import QtQuick.Controls 2.9
-import harbour.messwerk.MesswerkWidgets 1.0
+import QtQuick.Controls 2.2
+
+import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
-import "CustomTheme"
+import "../Common"
 
 BasePage {
     id: page
-    headerText: "Accelerometer"
 
-    property bool useGs: false;
+    title: "Accelerometer"
+    explanation: Accelerometer.available ? "" : "This device has no accelerometer."
+
+    readonly property real standardGravity: 9.80665
+
+    property bool useGs: false
 
     function convertNumber(n) {
-        if(useGs) {
-            n /= 9.81; // *pi/180
-        }
-
-        return n;
+        return useGs ? n / standardGravity : n;
     }
 
     function formatNumber(n) {
-        var unit;
+        return convertNumber(n).toFixed(3) + (useGs ? " g" : " m/s²");
+    }
 
-        if(useGs) {
-            unit = 'g';
-        } else {
-            unit = 'm/s²'
+    Component.onCompleted: Accelerometer.activate(Constants.PART_PAGE)
+    Component.onDestruction: Accelerometer.deactivate(Constants.PART_PAGE)
+
+    Connections {
+        target: Accelerometer
+        function onReadingUpdated() {
+            xRow.addValue(page.convertNumber(Accelerometer.ax));
+            yRow.addValue(page.convertNumber(Accelerometer.ay));
+            zRow.addValue(page.convertNumber(Accelerometer.az));
+        }
+    }
+
+    SettingsPageContent {
+        GroupBox {
+            width: parent.width
+            title: "Acceleration"
+
+            Column {
+                width: parent.width
+
+                PlotRow {
+                    id: xRow
+                    label: "X"
+                    value: page.formatNumber(Accelerometer.ax)
+                }
+                PlotRow {
+                    id: yRow
+                    label: "Y"
+                    value: page.formatNumber(Accelerometer.ay)
+                }
+                PlotRow {
+                    id: zRow
+                    label: "Z"
+                    value: page.formatNumber(Accelerometer.az)
+                }
+                HorizontalSeparator {
+                    width: parent.width
+                }
+                LabelAndValue {
+                    width: parent.width
+                    label: "Absolute"
+                    value: page.formatNumber(Accelerometer.abs)
+                }
+                HorizontalSeparator {
+                    width: parent.width
+                }
+                LabelAndValue {
+                    width: parent.width
+                    label: "Without gravity"
+                    value: page.formatNumber(Accelerometer.abs - page.standardGravity)
+                }
+            }
         }
 
-        return '<b>' + convertNumber(n).toFixed(3) + ' ' + unit + '</b>';
-    }
+        GroupBox {
+            width: parent.width
+            title: "Units"
 
-    function updateXPlot() {
-        xplot.addValue(convertNumber(accelerometer.ax));
-        xplot.update();
-    }
-
-    function updateYPlot() {
-        yplot.addValue(convertNumber(accelerometer.ay));
-        yplot.update();
-    }
-
-    function updateZPlot() {
-        zplot.addValue(convertNumber(accelerometer.az));
-        zplot.update();
-    }
-
-    Component.onCompleted: {
-        accelerometer.activate(Constants.PART_PAGE);
-        accelerometer.axChanged.connect(updateXPlot);
-        accelerometer.ayChanged.connect(updateYPlot);
-        accelerometer.azChanged.connect(updateZPlot);
-    }
-
-    Component.onDestruction: {
-        accelerometer.axChanged.disconnect(updateXPlot);
-        accelerometer.ayChanged.disconnect(updateYPlot);
-        accelerometer.azChanged.disconnect(updateZPlot);
-        accelerometer.deactivate(Constants.PART_PAGE)
-    }
-
-    // To enable PullDownMenu, place our content in a SilicaFlickable
-    Flickable {
-        anchors.fill: parent
-/*
-        // PullDownMenu and PushUpMenu must be declared in SilicaFlickable, SilicaListView or SilicaGridView
-        PullDownMenu {
-            MenuItem {
-                function toggleLogging() {
-                    if(accelerometer.isLogging) {
-                        accelerometer.stopLogging();
-                    } else {
-                        accelerometer.startLogging();
-                    }
+            LabelAndSwitch {
+                label: "Show in g"
+                checked: page.useGs
+                onToggled: {
+                    page.useGs = checked;
+                    xRow.reset();
+                    yRow.reset();
+                    zRow.reset();
                 }
-
-                text: (accelerometer.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: toggleLogging()
-            }
-            MenuItem {
-                function toggleUnit() {
-                    useGs = !useGs;
-
-                    xplot.reset();
-                    yplot.reset();
-                    zplot.reset();
-                }
-
-                text: qsTr("Change unit to " + (useGs ? 'm/s²' : 'g'))
-                onClicked: toggleUnit()
             }
         }
-*/
-        contentHeight: column.height
-        // cut out-of-bound graphics
-        clip: true
 
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
-        Column {
-            id: column
-
-            width: page.width
-            spacing: Theme.paddingLarge
-
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: xlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'X: ' + page.formatNumber(accelerometer.ax)
-                }
-                PlotWidget {
-                    id: xplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: ylabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Y: ' + page.formatNumber(accelerometer.ay)
-                }
-                PlotWidget {
-                    id: yplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: zlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Z: ' + page.formatNumber(accelerometer.az)
-                }
-                PlotWidget {
-                    id: zplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Label {
-                id: abslabel
-                font.pixelSize: Theme.fontSizeLarge
-                anchors.right: parent.right
-                anchors.rightMargin: Theme.paddingLarge
-                text: 'Absolute: ' + page.formatNumber(accelerometer.abs)
-            }
-            Label {
-                id: absnogravlabel
-                font.pixelSize: Theme.fontSizeLarge
-                anchors.right: parent.right
-                anchors.rightMargin: Theme.paddingLarge
-                text: 'Without gravity: ' + page.formatNumber(accelerometer.abs - 9.81)
-            }
+        LoggingGroup {
+            sensor: Accelerometer
         }
     }
 }
-
-

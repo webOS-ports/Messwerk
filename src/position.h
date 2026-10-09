@@ -4,9 +4,8 @@
 #include <QObject>
 #include <QGeoPositionInfo>
 #include <QGeoPositionInfoSource>
-#include <QSet>
-#include <QMap>
 #include <QFile>
+#include <QtNumeric>
 
 #include "activateable.h"
 
@@ -15,6 +14,8 @@ class Position : public QObject, public Activateable
     Q_OBJECT
 
     Q_PROPERTY(bool isLogging READ isLogging NOTIFY isLoggingChanged)
+    Q_PROPERTY(QString logFileName READ logFileName NOTIFY isLoggingChanged)
+    Q_PROPERTY(bool available READ available CONSTANT)
 
     Q_PROPERTY(qreal   latitude     READ latitude      NOTIFY latitudeChanged)
     Q_PROPERTY(qreal   longitude    READ longitude     NOTIFY longitudeChanged)
@@ -25,53 +26,57 @@ class Position : public QObject, public Activateable
     Q_PROPERTY(qreal   vertAccuracy READ vertAccuracy  NOTIFY vertAccuracyChanged)
 
 private:
-    QGeoPositionInfoSource *m_source;
-    bool                    m_sourceActive;
+    // null when the device has no position source at all
+    QGeoPositionInfoSource *m_source = nullptr;
+    bool                    m_sourceActive = false;
 
     QFile m_logFile;
 
-    qreal   m_latitude;
-    qreal   m_longitude;
-    qreal   m_altitude;
+    // NaN until the first fix, like an invalid QGeoCoordinate
+    qreal   m_latitude = qQNaN();
+    qreal   m_longitude = qQNaN();
+    qreal   m_altitude = qQNaN();
     QString m_maidenhead;
-    int     m_coordType;
-    qreal   m_horzAccuracy;
-    qreal   m_vertAccuracy;
+    int     m_coordType = QGeoCoordinate::InvalidCoordinate;
+    qreal   m_horzAccuracy = -1;
+    qreal   m_vertAccuracy = -1;
 
-    void logData(void);
+    void logData();
 
-    void updateMaidenhead(void);
+    void updateMaidenhead();
 
 public:
-    explicit Position(QObject *parent = 0);
-    ~Position();
+    explicit Position(QObject *parent = nullptr);
 
-    Q_INVOKABLE void activate(unsigned requestingPart);
-    Q_INVOKABLE void deactivate(unsigned requestingPart);
+    Q_INVOKABLE void activate(unsigned requestingPart) override;
+    Q_INVOKABLE void deactivate(unsigned requestingPart) override;
 
-    Q_INVOKABLE void startLogging(void);
-    Q_INVOKABLE void stopLogging(void);
+    Q_INVOKABLE void startLogging();
+    Q_INVOKABLE void stopLogging();
 
-    bool isLogging(void) { return isPartActive(Activateable::PART_LOGGING); }
+    bool isLogging() const { return isPartActive(Activateable::PART_LOGGING); }
+    QString logFileName() const { return isLogging() ? m_logFile.fileName() : QString(); }
+    bool available() const { return m_source != nullptr; }
 
-    qreal          latitude(void)     { return m_latitude; };
-    qreal          longitude(void)    { return m_longitude; };
-    qreal          altitude(void)     { return m_altitude; };
-    const QString& maidenhead(void)   { return m_maidenhead; };
-    int            coordType(void)    { return m_coordType; };
-    qreal          horzAccuracy(void) { return m_horzAccuracy; };
-    qreal          vertAccuracy(void) { return m_vertAccuracy; };
+    qreal          latitude() const     { return m_latitude; }
+    qreal          longitude() const    { return m_longitude; }
+    qreal          altitude() const     { return m_altitude; }
+    const QString& maidenhead() const   { return m_maidenhead; }
+    int            coordType() const    { return m_coordType; }
+    qreal          horzAccuracy() const { return m_horzAccuracy; }
+    qreal          vertAccuracy() const { return m_vertAccuracy; }
 
 signals:
     void isLoggingChanged(bool);
+    void loggingFailed(const QString &errorString);
 
-    void latitudeChanged(void);
-    void longitudeChanged(void);
-    void altitudeChanged(void);
-    void maidenheadChanged(void);
-    void coordTypeChanged(void);
-    void horzAccuracyChanged(void);
-    void vertAccuracyChanged(void);
+    void latitudeChanged();
+    void longitudeChanged();
+    void altitudeChanged();
+    void maidenheadChanged();
+    void coordTypeChanged();
+    void horzAccuracyChanged();
+    void vertAccuracyChanged();
 
 public slots:
     void positionUpdated(const QGeoPositionInfo &posInfo);

@@ -1,7 +1,6 @@
-#include <QStringList>
 #include <QDateTime>
 
-#include <qmath.h>
+#include <QtMath>
 
 #include "accelerometer.h"
 
@@ -10,53 +9,60 @@ Accelerometer::Accelerometer(bool updateInternally, QObject *parent)
     : Sensor(Sensor::Accelerometer, parent)
 {
     m_sensor = new QAccelerometer(this);
-    m_logBaseName = "accelerometer";
+    m_logBaseName = QStringLiteral("accelerometer");
 
-    if(updateInternally) {
-        QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(refresh()));
+    initSensor(updateInternally);
+}
+
+QAccelerometerReading *Accelerometer::currentReading() const
+{
+    // null until the backend delivered its first reading
+    return static_cast<QAccelerometer*>(m_sensor)->reading();
+}
+
+void Accelerometer::logValues()
+{
+    if(!isLogging()) {
+        return;
     }
 
-    QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(logValues()));
-}
+    QAccelerometerReading *reading = currentReading();
 
-Accelerometer::~Accelerometer()
-{
-}
-
-void Accelerometer::logValues(void)
-{
-    if(isLogging()) {
-        QAccelerometer *accelerometer = dynamic_cast<QAccelerometer*>(m_sensor);
-        QAccelerometerReading *reading = accelerometer->reading();
-
-        QString line = QString("%1\t%2\t%3\t%4\n")
-                               .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
-                               .arg(reading->x())
-                               .arg(reading->y())
-                               .arg(reading->z());
-
-        m_logFile.write(line.toUtf8());
+    if(!reading) {
+        return;
     }
+
+    QString line = QStringLiteral("%1\t%2\t%3\t%4\n")
+                       .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
+                       .arg(reading->x())
+                       .arg(reading->y())
+                       .arg(reading->z());
+
+    writeLogLine(line);
 }
 
-void Accelerometer::refresh(void)
+void Accelerometer::refresh()
 {
     if(!m_sensor->isActive()) {
         return;
     }
 
-    QAccelerometer *accelerometer = dynamic_cast<QAccelerometer*>(m_sensor);
-    QAccelerometerReading *reading = accelerometer->reading();
+    QAccelerometerReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
 
     m_ax = reading->x();
     m_ay = reading->y();
     m_az = reading->z();
 
-    m_abs = sqrt(m_ax*m_ax + m_ay*m_ay + m_az*m_az);
+    m_abs = qSqrt(m_ax*m_ax + m_ay*m_ay + m_az*m_az);
 
     emit axChanged();
     emit ayChanged();
     emit azChanged();
-
     emit absChanged();
+
+    emit readingUpdated();
 }

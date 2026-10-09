@@ -1,169 +1,99 @@
+/*
+ * (c) 2026 Herman van Hazendonk <github.com@herrie.org>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 3, as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranties of
+ * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import QtQuick 2.9
-import QtQuick.Controls 2.9
-import harbour.messwerk.MesswerkWidgets 1.0
+import QtQuick.Controls 2.2
+
+import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
-import "CustomTheme"
+import "../Common"
 
 BasePage {
     id: page
-    headerText: "Gyroscope"
 
-    property bool useRad: false;
+    title: "Gyroscope"
+    explanation: Gyroscope.available ? "" : "This device has no gyroscope."
+
+    property bool useRad: false
 
     function convertNumber(n) {
-        if(useRad) {
-            n *= 0.017453; // *pi/180
-        }
-
-        return n;
+        return useRad ? n * Math.PI / 180 : n;
     }
 
     function formatNumber(n) {
-        var unit;
+        return convertNumber(n).toFixed(3) + (useRad ? " rad/s" : " °/s");
+    }
 
-        if(useRad) {
-            unit = 'rad/s';
-        } else {
-            unit = '°/s'
+    Component.onCompleted: Gyroscope.activate(Constants.PART_PAGE)
+    Component.onDestruction: Gyroscope.deactivate(Constants.PART_PAGE)
+
+    Connections {
+        target: Gyroscope
+        function onReadingUpdated() {
+            xRow.addValue(page.convertNumber(Gyroscope.rx));
+            yRow.addValue(page.convertNumber(Gyroscope.ry));
+            zRow.addValue(page.convertNumber(Gyroscope.rz));
+        }
+    }
+
+    SettingsPageContent {
+        GroupBox {
+            width: parent.width
+            title: "Angular velocity"
+
+            Column {
+                width: parent.width
+
+                PlotRow {
+                    id: xRow
+                    label: "X"
+                    value: page.formatNumber(Gyroscope.rx)
+                }
+                PlotRow {
+                    id: yRow
+                    label: "Y"
+                    value: page.formatNumber(Gyroscope.ry)
+                }
+                PlotRow {
+                    id: zRow
+                    label: "Z"
+                    value: page.formatNumber(Gyroscope.rz)
+                }
+            }
         }
 
-        return '<b>' + convertNumber(n).toFixed(3) + ' ' + unit + '</b>';
-    }
+        GroupBox {
+            width: parent.width
+            title: "Units"
 
-    function updateXPlot() {
-        xplot.addValue(convertNumber(gyroscope.rx));
-        xplot.update();
-    }
-
-    function updateYPlot() {
-        yplot.addValue(convertNumber(gyroscope.ry));
-        yplot.update();
-    }
-
-    function updateZPlot() {
-        zplot.addValue(convertNumber(gyroscope.rz));
-        zplot.update();
-    }
-
-    Component.onCompleted: {
-        gyroscope.activate(Constants.PART_PAGE)
-        gyroscope.rxChanged.connect(updateXPlot);
-        gyroscope.ryChanged.connect(updateYPlot);
-        gyroscope.rzChanged.connect(updateZPlot);
-    }
-
-    Component.onDestruction: {
-        gyroscope.rxChanged.disconnect(updateXPlot);
-        gyroscope.ryChanged.disconnect(updateYPlot);
-        gyroscope.rzChanged.disconnect(updateZPlot);
-        gyroscope.deactivate(Constants.PART_PAGE)
-    }
-
-
-    // To enable PullDownMenu, place our content in a SilicaFlickable
-    Flickable {
-        anchors.fill: parent
-/*
-        // PullDownMenu and PushUpMenu must be declared in SilicaFlickable, SilicaListView or SilicaGridView
-        PullDownMenu {
-            MenuItem {
-                function toggleLogging() {
-                    if(gyroscope.isLogging) {
-                        gyroscope.stopLogging();
-                    } else {
-                        gyroscope.startLogging();
-                    }
+            LabelAndSwitch {
+                label: "Show in rad/s"
+                checked: page.useRad
+                onToggled: {
+                    page.useRad = checked;
+                    xRow.reset();
+                    yRow.reset();
+                    zRow.reset();
                 }
-
-                text: (gyroscope.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: toggleLogging()
-            }
-            MenuItem {
-                function toggleUnit() {
-                    useRad = !useRad;
-
-                    xplot.reset();
-                    yplot.reset();
-                    zplot.reset();
-                }
-
-                text: qsTr("Change unit to " + (useRad ? '°/s' : 'rad/s'))
-                onClicked: toggleUnit()
             }
         }
-*/
-        contentHeight: column.height
-        // cut out-of-bound graphics
-        clip: true
 
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
-        Column {
-            id: column
-
-            width: page.width
-            spacing: Theme.paddingLarge
-
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: xlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'X: ' + page.formatNumber(gyroscope.rx)
-                }
-                PlotWidget {
-                    id: xplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: ylabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Y: ' + page.formatNumber(gyroscope.ry)
-                }
-                PlotWidget {
-                    id: yplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: zlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Z: ' + page.formatNumber(gyroscope.rz)
-                }
-                PlotWidget {
-                    id: zplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
+        LoggingGroup {
+            sensor: Gyroscope
         }
     }
 }
-
-

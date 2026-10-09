@@ -1,8 +1,5 @@
 #include <QDateTime>
 
-#include <qmath.h>
-#include <QDebug>
-
 #include "rotation.h"
 
 
@@ -10,43 +7,49 @@ Rotation::Rotation(bool updateInternally, QObject *parent)
     : Sensor(Sensor::Rotation, parent)
 {
     m_sensor = new QRotationSensor(this);
-    m_logBaseName = "rotation";
+    m_logBaseName = QStringLiteral("rotation");
 
-    if(updateInternally) {
-        QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(refresh()));
+    initSensor(updateInternally);
+}
+
+QRotationReading *Rotation::currentReading() const
+{
+    // null until the backend delivered its first reading
+    return static_cast<QRotationSensor*>(m_sensor)->reading();
+}
+
+void Rotation::logValues()
+{
+    if(!isLogging()) {
+        return;
     }
 
-    QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(logValues()));
-}
+    QRotationReading *reading = currentReading();
 
-Rotation::~Rotation()
-{
-}
-
-void Rotation::logValues(void)
-{
-    if(isLogging()) {
-        QRotationSensor *rotation = dynamic_cast<QRotationSensor*>(m_sensor);
-        QRotationReading *reading = rotation->reading();
-
-        QString line = QString("%1\t%2\t%3\t%4\n")
-                               .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
-                               .arg(reading->x())
-                               .arg(reading->y())
-                               .arg(reading->z());
-
-        m_logFile.write(line.toUtf8());
+    if(!reading) {
+        return;
     }
+
+    QString line = QStringLiteral("%1\t%2\t%3\t%4\n")
+                       .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
+                       .arg(reading->x())
+                       .arg(reading->y())
+                       .arg(reading->z());
+
+    writeLogLine(line);
 }
 
-void Rotation::refresh(void)
+void Rotation::refresh()
 {
     if(!m_sensor->isActive()) {
         return;
     }
 
-    QRotationSensor *rotation = dynamic_cast<QRotationSensor*>(m_sensor);
-    QRotationReading *reading = rotation->reading();
+    QRotationReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
 
     m_rx = reading->x();
     m_ry = reading->y();
@@ -55,4 +58,6 @@ void Rotation::refresh(void)
     emit rxChanged();
     emit ryChanged();
     emit rzChanged();
+
+    emit readingUpdated();
 }

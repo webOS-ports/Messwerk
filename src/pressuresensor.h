@@ -12,20 +12,23 @@ class PressureSensor : public Sensor
     Q_PROPERTY(qreal pressure READ pressure NOTIFY pressureChanged)
 
 private:
-    qreal m_pressure;
+    qreal m_pressure = 0;
+
+    QPressureReading *currentReading() const;
 
 public:
-    explicit PressureSensor(bool updateInternally = false, QObject *parent = NULL);
-    ~PressureSensor();
+    explicit PressureSensor(bool updateInternally = false, QObject *parent = nullptr);
 
-    qreal pressure(void) const { return m_pressure; }
+    qreal pressure() const { return m_pressure; }
 
 public slots:
-    void refresh(void);
-    void logValues(void);
+    void refresh() override;
+
+protected slots:
+    void logValues() override;
 
 signals:
-    void pressureChanged(void);
+    void pressureChanged();
 };
 
 #endif // PRESSURESENSOR_H

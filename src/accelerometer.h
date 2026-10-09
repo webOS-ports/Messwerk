@@ -9,35 +9,38 @@ class Accelerometer : public Sensor
 {
     Q_OBJECT
 
-    Q_PROPERTY(qreal ax READ ax NOTIFY axChanged)
-    Q_PROPERTY(qreal ay READ ay NOTIFY ayChanged)
-    Q_PROPERTY(qreal az READ az NOTIFY azChanged)
+    Q_PROPERTY(qreal ax  READ ax  NOTIFY axChanged)
+    Q_PROPERTY(qreal ay  READ ay  NOTIFY ayChanged)
+    Q_PROPERTY(qreal az  READ az  NOTIFY azChanged)
     Q_PROPERTY(qreal abs READ abs NOTIFY absChanged)
 
 private:
-    qreal m_ax;
-    qreal m_ay;
-    qreal m_az;
-    qreal m_abs;
+    qreal m_ax = 0;
+    qreal m_ay = 0;
+    qreal m_az = 0;
+    qreal m_abs = 0;
+
+    QAccelerometerReading *currentReading() const;
 
 public:
-    explicit Accelerometer(bool updateInternally = false, QObject *parent = NULL);
-    ~Accelerometer();
+    explicit Accelerometer(bool updateInternally = false, QObject *parent = nullptr);
 
-    qreal ax(void) const { return m_ax; }
-    qreal ay(void) const { return m_ay; }
-    qreal az(void) const { return m_az; }
-    qreal abs(void) const { return m_abs; }
+    qreal ax() const { return m_ax; }
+    qreal ay() const { return m_ay; }
+    qreal az() const { return m_az; }
+    qreal abs() const { return m_abs; }
 
 public slots:
-    void refresh(void);
-    void logValues(void);
+    void refresh() override;
+
+protected slots:
+    void logValues() override;
 
 signals:
-    void axChanged(void);
-    void ayChanged(void);
-    void azChanged(void);
-    void absChanged(void);
+    void axChanged();
+    void ayChanged();
+    void azChanged();
+    void absChanged();
 };
 
 #endif // ACCELEROMETER_H

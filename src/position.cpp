@@ -2,7 +2,7 @@
 #include <QDebug>
 #include <QStringList>
 
-#include "settings.h"
+#include "logfile.h"
 #include "wakelock.h"
 
 #include "position.h"
@@ -13,7 +13,7 @@ void Position::logData()
         /* Log file line format:
          * timestamp<tab>latitude<tab>longitude<tab>altitude\n
          */
-        QString line = QString("%1\t%2\t%3\t%4\n")
+        QString line = QStringLiteral("%1\t%2\t%3\t%4\n")
                                .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
                                .arg(m_latitude)
                                .arg(m_longitude)
@@ -23,7 +23,7 @@ void Position::logData()
     }
 }
 
-void Position::updateMaidenhead(void)
+void Position::updateMaidenhead()
 {
     const unsigned FIELDS     = 18;
     const unsigned SQUARES    = 10;
@@ -31,8 +31,17 @@ void Position::updateMaidenhead(void)
 
     const unsigned GRIDLEN = FIELDS * SQUARES * SUBSQUARES;
 
-    unsigned gridIdxLon = (m_longitude + 180) * GRIDLEN / 360.0;
-    unsigned gridIdxLat = (m_latitude  + 90)  * GRIDLEN / 180.0;
+    m_maidenhead.clear();
+
+    // a NaN or out of range value would be undefined behaviour in the
+    // conversion to unsigned below
+    if(!(m_latitude >= -90 && m_latitude <= 90 && m_longitude >= -180 && m_longitude <= 180)) {
+        return;
+    }
+
+    // the north pole and the antimeridian belong to the last field, not to a 19th
+    unsigned gridIdxLon = qMin(unsigned((m_longitude + 180) * GRIDLEN / 360.0), GRIDLEN - 1);
+    unsigned gridIdxLat = qMin(unsigned((m_latitude  + 90)  * GRIDLEN / 180.0), GRIDLEN - 1);
 
     unsigned fieldLon = gridIdxLon / (SQUARES * SUBSQUARES);
     unsigned fieldLat = gridIdxLat / (SQUARES * SUBSQUARES);
@@ -42,8 +51,6 @@ void Position::updateMaidenhead(void)
 
     unsigned subSquareLon = gridIdxLon % SUBSQUARES;
     unsigned subSquareLat = gridIdxLat % SUBSQUARES;
-
-    m_maidenhead = "";
 
     m_maidenhead += QChar('A' + fieldLon);
     m_maidenhead += QChar('A' + fieldLat);
@@ -56,18 +63,16 @@ void Position::updateMaidenhead(void)
 }
 
 Position::Position(QObject *parent) :
-    QObject(parent), m_sourceActive(false)
+    QObject(parent)
 {
     m_source = QGeoPositionInfoSource::createDefaultSource(this);
 
-    if(!connect(m_source, SIGNAL(positionUpdated(const QGeoPositionInfo&)), this, SLOT(positionUpdated(const QGeoPositionInfo&)))) {
-        qDebug() << "Failed to connect m_source";
+    if(!m_source) {
+        qWarning() << "No position source available";
+        return;
     }
-}
 
-Position::~Position()
-{
-    delete m_source;
+    connect(m_source, &QGeoPositionInfoSource::positionUpdated, this, &Position::positionUpdated);
 }
 
 
@@ -75,7 +80,7 @@ void Position::activate(unsigned requestingPart)
 {
     Activateable::activate(requestingPart);
 
-    if(!m_sourceActive) {
+    if(m_source && !m_sourceActive) {
         qDebug() << "Position info source started";
         m_source->startUpdates();
         m_sourceActive = true;
@@ -94,41 +99,48 @@ void Position::deactivate(unsigned requestingPart)
 {
     Activateable::deactivate(requestingPart);
 
-    // stop the sensor if all parts are deactivated
-    if(!(this->isActive()) && m_sourceActive) {
+    // stop the source if all parts are deactivated
+    if(!isActive() && m_sourceActive) {
         qDebug() << "Position info source stopped";
         m_source->stopUpdates();
         m_sourceActive = false;
     }
 
-    if(requestingPart == PART_PAGE) {
+    // the wake lock parts are bits, so only release them with the last user
+    if(requestingPart == PART_PAGE && !isPartActive(PART_PAGE)) {
         WakeLock::instance().deactivateScreenLock(WakeLock::PART_POSITION);
     }
 
-    if(requestingPart == PART_LOGGING) {
+    if(requestingPart == PART_LOGGING && !isPartActive(PART_LOGGING)) {
         WakeLock::instance().deactivateBackground(WakeLock::PART_POSITION);
     }
 }
 
 void Position::startLogging()
 {
+    if(isLogging()) {
+        return;
+    }
+
+    QString error;
+
+    if(!openNewLogFile(m_logFile, QStringLiteral("position"), &error)) {
+        qWarning() << error;
+        emit loggingFailed(error);
+        return;
+    }
+
     activate(Activateable::PART_LOGGING);
-
-    QDateTime now = QDateTime::currentDateTime();
-
-    QString fileName = "position_" + now.toString("yyyyMMdd-hhmmss") + ".csv";
-    QString absPath = QDir(Settings::instance().getLoggingPath()).filePath(fileName);
-
-    qDebug() << "Starting to log at" << absPath;
-
-    m_logFile.setFileName(absPath);
-    m_logFile.open(QFile::WriteOnly);
 
     emit isLoggingChanged(true);
 }
 
 void Position::stopLogging()
 {
+    if(!isLogging()) {
+        return;
+    }
+
     deactivate(Activateable::PART_LOGGING);
 
     m_logFile.close();
@@ -169,4 +181,6 @@ void Position::positionUpdated(const QGeoPositionInfo &posInfo)
     updateMaidenhead();
 
     emit maidenheadChanged();
+
+    logData();
 }

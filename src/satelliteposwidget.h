@@ -2,6 +2,7 @@
 #define SATELLITEPOSWIDGET_H
 
 #include <QQuickPaintedItem>
+#include <QPointer>
 
 #include "satelliteinfo.h"
 
@@ -14,32 +15,35 @@ class SatellitePosWidget : public QQuickPaintedItem
     Q_PROPERTY(QColor scaleColor READ scaleColor WRITE setscaleColor)
     Q_PROPERTY(QColor northColor READ northColor WRITE setnorthColor)
     Q_PROPERTY(qreal northDirection READ northDirection WRITE setnorthDirection NOTIFY northDirectionChanged)
+    Q_PROPERTY(SatelliteInfo *satelliteInfo READ satelliteInfo WRITE setSatelliteInfo NOTIFY satelliteInfoChanged)
 
 private:
     QColor m_usedColor;
     QColor m_visibleColor;
     QColor m_scaleColor;
     QColor m_northColor;
-    qreal m_northDirection;
+    qreal m_northDirection = 0;
 
-    SatelliteInfo *m_satelliteInfo;
+    // Cleared by QPointer if the source goes away before this item does
+    QPointer<SatelliteInfo> m_satelliteInfo;
 
 public:
-    explicit SatellitePosWidget(QQuickItem *parent = 0);
+    explicit SatellitePosWidget(QQuickItem *parent = nullptr);
 
-    void paint(QPainter *painter);
+    void paint(QPainter *painter) override;
 
-    Q_INVOKABLE void setSatelliteInfo(SatelliteInfo *si) { m_satelliteInfo = si; }
+    SatelliteInfo *satelliteInfo() const { return m_satelliteInfo.data(); }
+    void setSatelliteInfo(SatelliteInfo *si);
 
-    void setvisibleColor(const QColor &color) { m_visibleColor = color; }
-    void setusedColor(const QColor &color) { m_usedColor = color; }
-    void setscaleColor(const QColor &color) { m_scaleColor = color; }
-    void setnorthColor(const QColor &color) { m_northColor = color; }
+    void setvisibleColor(const QColor &color) { m_visibleColor = color; update(); }
+    void setusedColor(const QColor &color) { m_usedColor = color; update(); }
+    void setscaleColor(const QColor &color) { m_scaleColor = color; update(); }
+    void setnorthColor(const QColor &color) { m_northColor = color; update(); }
 
-    const QColor& visibleColor() { return m_visibleColor; }
-    const QColor& usedColor() { return m_usedColor; }
-    const QColor& scaleColor() { return m_scaleColor; }
-    const QColor& northColor() { return m_northColor; }
+    QColor visibleColor() const { return m_visibleColor; }
+    QColor usedColor() const { return m_usedColor; }
+    QColor scaleColor() const { return m_scaleColor; }
+    QColor northColor() const { return m_northColor; }
 
     qreal northDirection() const { return m_northDirection; }
 
@@ -48,6 +52,7 @@ public slots:
 
 signals:
     void northDirectionChanged(qreal arg);
+    void satelliteInfoChanged();
 };
 
 #endif // SATELLITEPOSWIDGET_H

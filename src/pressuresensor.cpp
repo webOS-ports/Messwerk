@@ -1,7 +1,4 @@
-#include <QStringList>
 #include <QDateTime>
-
-#include <qmath.h>
 
 #include "pressuresensor.h"
 
@@ -10,43 +7,51 @@ PressureSensor::PressureSensor(bool updateInternally, QObject *parent)
     : Sensor(Sensor::PressureSensor, parent)
 {
     m_sensor = new QPressureSensor(this);
-    m_logBaseName = "pressuresensor";
+    m_logBaseName = QStringLiteral("pressuresensor");
 
-    if(updateInternally) {
-        QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(refresh()));
+    initSensor(updateInternally);
+}
+
+QPressureReading *PressureSensor::currentReading() const
+{
+    // null until the backend delivered its first reading
+    return static_cast<QPressureSensor*>(m_sensor)->reading();
+}
+
+void PressureSensor::logValues()
+{
+    if(!isLogging()) {
+        return;
     }
 
-    QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(logValues()));
-}
+    QPressureReading *reading = currentReading();
 
-PressureSensor::~PressureSensor()
-{
-}
-
-void PressureSensor::logValues(void)
-{
-    if(isLogging()) {
-        QPressureSensor *pressure = dynamic_cast<QPressureSensor*>(m_sensor);
-        QPressureReading *reading = pressure->reading();
-
-        QString line = QString("%1\t%2\n")
-                               .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
-                               .arg(reading->pressure());
-
-        m_logFile.write(line.toUtf8());
+    if(!reading) {
+        return;
     }
+
+    QString line = QStringLiteral("%1\t%2\n")
+                       .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
+                       .arg(reading->pressure());
+
+    writeLogLine(line);
 }
 
-void PressureSensor::refresh(void)
+void PressureSensor::refresh()
 {
     if(!m_sensor->isActive()) {
         return;
     }
 
-    QPressureSensor *pressure = dynamic_cast<QPressureSensor*>(m_sensor);
-    QPressureReading *reading = pressure->reading();
+    QPressureReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
 
     m_pressure = reading->pressure();
 
     emit pressureChanged();
+
+    emit readingUpdated();
 }

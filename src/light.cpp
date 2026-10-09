@@ -7,43 +7,51 @@ Light::Light(bool updateInternally, QObject *parent)
     : Sensor(Sensor::Light, parent)
 {
     m_sensor = new QLightSensor(this);
-    m_logBaseName = "light";
+    m_logBaseName = QStringLiteral("light");
 
-    if(updateInternally) {
-        QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(refresh()));
+    initSensor(updateInternally);
+}
+
+QLightReading *Light::currentReading() const
+{
+    // null until the backend delivered its first reading
+    return static_cast<QLightSensor*>(m_sensor)->reading();
+}
+
+void Light::logValues()
+{
+    if(!isLogging()) {
+        return;
     }
 
-    QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(logValues()));
-}
+    QLightReading *reading = currentReading();
 
-Light::~Light()
-{
-}
-
-void Light::logValues(void)
-{
-    if(isLogging()) {
-        QLightSensor *light = dynamic_cast<QLightSensor*>(m_sensor);
-        QLightReading *reading = light->reading();
-
-        QString line = QString("%1\t%2\n")
-                               .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
-                               .arg(reading->lux());
-
-        m_logFile.write(line.toUtf8());
+    if(!reading) {
+        return;
     }
+
+    QString line = QStringLiteral("%1\t%2\n")
+                       .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
+                       .arg(reading->lux());
+
+    writeLogLine(line);
 }
 
-void Light::refresh(void)
+void Light::refresh()
 {
     if(!m_sensor->isActive()) {
         return;
     }
 
-    QLightSensor *light = dynamic_cast<QLightSensor*>(m_sensor);
-    QLightReading *reading = light->reading();
+    QLightReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
 
     m_brightness = reading->lux();
 
     emit brightnessChanged();
+
+    emit readingUpdated();
 }

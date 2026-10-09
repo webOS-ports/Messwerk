@@ -1,168 +1,99 @@
+/*
+ * (c) 2026 Herman van Hazendonk <github.com@herrie.org>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 3, as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranties of
+ * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import QtQuick 2.9
-import QtQuick.Controls 2.9
-import harbour.messwerk.MesswerkWidgets 1.0
+import QtQuick.Controls 2.2
+
+import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
-import "CustomTheme"
+import "../Common"
 
 BasePage {
     id: page
-    headerText: "Rotation"
 
-    property bool useRad: false;
+    title: "Rotation"
+    explanation: RotationSensor.available ? "" : "This device has no rotation sensor."
+
+    property bool useRad: false
 
     function convertNumber(n) {
-        if(useRad) {
-            n *= 0.017453; // *pi/180
-        }
-
-        return n;
+        return useRad ? n * Math.PI / 180 : n;
     }
 
     function formatNumber(n) {
-        var unit;
+        return convertNumber(n).toFixed(3) + (useRad ? " rad" : " °");
+    }
 
-        if(useRad) {
-            unit = 'rad';
-        } else {
-            unit = '°'
+    Component.onCompleted: RotationSensor.activate(Constants.PART_PAGE)
+    Component.onDestruction: RotationSensor.deactivate(Constants.PART_PAGE)
+
+    Connections {
+        target: RotationSensor
+        function onReadingUpdated() {
+            xRow.addValue(page.convertNumber(RotationSensor.rx));
+            yRow.addValue(page.convertNumber(RotationSensor.ry));
+            zRow.addValue(page.convertNumber(RotationSensor.rz));
+        }
+    }
+
+    SettingsPageContent {
+        GroupBox {
+            width: parent.width
+            title: "Orientation"
+
+            Column {
+                width: parent.width
+
+                PlotRow {
+                    id: xRow
+                    label: "X"
+                    value: page.formatNumber(RotationSensor.rx)
+                }
+                PlotRow {
+                    id: yRow
+                    label: "Y"
+                    value: page.formatNumber(RotationSensor.ry)
+                }
+                PlotRow {
+                    id: zRow
+                    label: "Z"
+                    value: page.formatNumber(RotationSensor.rz)
+                }
+            }
         }
 
-        return '<b>' + convertNumber(n).toFixed(3) + ' ' + unit + '</b>';
-    }
+        GroupBox {
+            width: parent.width
+            title: "Units"
 
-    function updateXPlot() {
-        xplot.addValue(convertNumber(rotationsensor.rx));
-        xplot.update();
-    }
-
-    function updateYPlot() {
-        yplot.addValue(convertNumber(rotationsensor.ry));
-        yplot.update();
-    }
-
-    function updateZPlot() {
-        zplot.addValue(convertNumber(rotationsensor.rz));
-        zplot.update();
-    }
-
-    Component.onCompleted: {
-        rotationsensor.activate(Constants.PART_PAGE)
-        rotationsensor.rxChanged.connect(updateXPlot);
-        rotationsensor.ryChanged.connect(updateYPlot);
-        rotationsensor.rzChanged.connect(updateZPlot);
-    }
-
-    Component.onDestruction: {
-        rotationsensor.rxChanged.disconnect(updateXPlot);
-        rotationsensor.ryChanged.disconnect(updateYPlot);
-        rotationsensor.rzChanged.disconnect(updateZPlot);
-        rotationsensor.deactivate(Constants.PART_PAGE)
-    }
-
-    // To enable PullDownMenu, place our content in a SilicaFlickable
-    Flickable {
-        anchors.fill: parent
-/*
-        // PullDownMenu and PushUpMenu must be declared in SilicaFlickable, SilicaListView or SilicaGridView
-        PullDownMenu {
-            MenuItem {
-                function toggleLogging() {
-                    if(rotationsensor.isLogging) {
-                        rotationsensor.stopLogging();
-                    } else {
-                        rotationsensor.startLogging();
-                    }
+            LabelAndSwitch {
+                label: "Show in radians"
+                checked: page.useRad
+                onToggled: {
+                    page.useRad = checked;
+                    xRow.reset();
+                    yRow.reset();
+                    zRow.reset();
                 }
-
-                text: (rotationsensor.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: toggleLogging()
-            }
-            MenuItem {
-                function toggleUnit() {
-                    useRad = !useRad;
-
-                    xplot.reset();
-                    yplot.reset();
-                    zplot.reset();
-                }
-
-                text: qsTr("Change unit to " + (useRad ? '°' : 'rad'))
-                onClicked: toggleUnit()
             }
         }
-*/
-        contentHeight: column.height
-        // cut out-of-bound graphics
-        clip: true
 
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
-        Column {
-            id: column
-
-            width: page.width
-            spacing: Theme.paddingLarge
-
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: xlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'X: ' + page.formatNumber(rotationsensor.rx)
-                }
-                PlotWidget {
-                    id: xplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: ylabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Y: ' + page.formatNumber(rotationsensor.ry)
-                }
-                PlotWidget {
-                    id: yplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
-            Column {
-                width: parent.width
-                spacing: Theme.paddingSmall
-
-                Label {
-                    id: zlabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.paddingLarge
-                    text: 'Z: ' + page.formatNumber(rotationsensor.rz)
-                }
-                PlotWidget {
-                    id: zplot
-                    width: parent.width
-                    height: 150
-                    plotColor: Theme.highlightColor
-                    scaleColor: Theme.secondaryHighlightColor
-                }
-            }
+        LoggingGroup {
+            sensor: RotationSensor
         }
     }
 }
-
-
