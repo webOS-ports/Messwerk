@@ -37,6 +37,9 @@ void Sensor::initSensor(bool updateInternally)
         qWarning() << "No backend for" << m_sensor->type();
     }
 
+    // Connected first, so refresh() and logValues() below see it already set
+    connect(m_sensor, &QSensor::readingChanged, this, [this]() { m_haveReading = true; });
+
     if(updateInternally) {
         connect(m_sensor, &QSensor::readingChanged, this, &Sensor::refresh);
     }
@@ -75,6 +78,8 @@ void Sensor::deactivate(unsigned requestingPart)
     if(!isActive() && m_sensor->isActive()) {
         qDebug() << "Sensor stopped";
         m_sensor->stop();
+        // the next start must not plot the value from before as new
+        m_haveReading = false;
     }
 
     // the wake lock parts are bits, so only release them with the last user

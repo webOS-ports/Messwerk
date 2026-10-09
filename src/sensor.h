@@ -30,6 +30,9 @@ private:
     static unsigned sensorTypeToWakeLockPart(Type type);
 
     bool m_available = false;
+    // QSensor::reading() exists, all zeros, before the backend delivered
+    // anything; this says whether it has
+    bool m_haveReading = false;
 
 protected:
     // owned through the QObject parent, set by the subclass constructor
@@ -42,6 +45,8 @@ protected:
     void initSensor(bool updateInternally);
 
     void writeLogLine(const QString &line);
+
+    bool haveReading() const { return m_haveReading; }
 
 public:
     explicit Sensor(Type type, QObject *parent = nullptr);

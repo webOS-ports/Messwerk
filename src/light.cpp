@@ -14,7 +14,12 @@ Light::Light(bool updateInternally, QObject *parent)
 
 QLightReading *Light::currentReading() const
 {
-    // null until the backend delivered its first reading
+    // null until the backend delivered its first reading: before that the
+    // reading object exists but holds zeros, which plotted as a spike from 0
+    if(!haveReading()) {
+        return nullptr;
+    }
+
     return static_cast<QLightSensor*>(m_sensor)->reading();
 }
 
