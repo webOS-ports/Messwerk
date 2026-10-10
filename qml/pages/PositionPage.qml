@@ -1,208 +1,163 @@
+/*
+ * (c) 2026 Herman van Hazendonk <github.com@herrie.org>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 3, as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranties of
+ * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import QtQuick 2.9
-import QtQuick.Controls 2.9
-import harbour.messwerk.MesswerkWidgets 1.0
+import QtQuick.Controls 2.2
+
+import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
-import "CustomTheme"
+import "../Common"
 
 BasePage {
     id: page
-    headerText: "Position"
 
-    property bool decimalCoord: true;
+    title: "Position"
+    explanation: PositionSensor.available ? "" : "No position source is available on this device."
+
+    property bool decimalCoord: true
 
     function formatCoordinate(n, isLon) {
-        if(decimalCoord) {
-            return '<b>' + n.toFixed(6) + ' °</b>';
-        } else {
-            var coordText = "";
+        if (!isFinite(n))
+            return "–";
 
-            var absn = Math.abs(n);
-            var deg = Math.floor(absn);
-            var min = Math.floor(absn * 60) % 60;
-            var sec = Math.floor(absn * 3600) % 60;
+        if (decimalCoord)
+            return n.toFixed(6) + " °";
 
-            coordText  = deg + "° ";
-            coordText += min + "' ";
-            coordText += sec + "\" ";
+        // Rounded once at the finest unit, so 59.9999" cannot show as 60"
+        var totalSec = Math.round(Math.abs(n) * 3600);
+        var deg = Math.floor(totalSec / 3600);
+        var min = Math.floor(totalSec / 60) % 60;
+        var sec = totalSec % 60;
+        var hemisphere = isLon ? (n >= 0 ? "E" : "W") : (n >= 0 ? "N" : "S");
 
-            if(isLon) { // longitude: east/west
-                if(n >= 0) {
-                    coordText += "E";
-                } else {
-                    coordText += "W";
-                }
-            } else { // latitude: north/south
-                if(n >= 0) {
-                    coordText += "N";
-                } else {
-                    coordText += "S";
-                }
-            }
+        return deg + "° " + min + "' " + sec + "\" " + hemisphere;
+    }
 
-            return '<b>' + coordText + '</b>';
-        }
+    function formatMeters(n) {
+        return (isFinite(n) && n >= 0) ? n.toFixed(2) + " m" : "–";
     }
 
     function formatAltitude(n) {
-        if(!isFinite(n)) {
-            return '<b>N/A</b>';
-        } else {
-            return '<b>' + n.toFixed(2) + ' m</b>';
-        }
-    }
-
-    function formatAccuracy(n) {
-        if(n < 0) {
-            return '<b>N/A</b>';
-        } else {
-            return '<b>' + n.toFixed(2) + ' m</b>';
-        }
+        return isFinite(n) ? n.toFixed(2) + " m" : "–";
     }
 
     function formatFix(n) {
-        switch(n) {
-            case Constants.COORD_2D:
-                return '<b>2D</b>';
-
-            case Constants.COORD_3D:
-                return '<b>3D</b>';
-
-            case Constants.COORD_INVALID:
-                return '<b>None</b>';
-
-            default:
-                return '<b>Unknown</b>';
+        switch (n) {
+        case Constants.COORD_2D:
+            return "2D";
+        case Constants.COORD_3D:
+            return "3D";
+        case Constants.COORD_INVALID:
+            return "None";
+        default:
+            return "Unknown";
         }
     }
 
-    Component.onCompleted: {
-        positionsensor.activate(Constants.PART_PAGE);
-    }
-    Component.onDestruction: {
-        positionsensor.deactivate(Constants.PART_PAGE);
-    }
+    Component.onCompleted: PositionSensor.activate(Constants.PART_PAGE)
+    Component.onDestruction: PositionSensor.deactivate(Constants.PART_PAGE)
 
-    // To enable PullDownMenu, place our content in a SilicaFlickable
-    Flickable {
-        anchors.fill: parent
+    SettingsPageContent {
+        GroupBox {
+            width: parent.width
+            title: "Coordinates (WGS84)"
 
-        contentHeight: column.height
-        // cut out-of-bound graphics
-        clip: true
-/*
-        PullDownMenu {
-            MenuItem {
-                function nextCoordFormat() {
-                    decimalCoord = !decimalCoord;
+            Column {
+                width: parent.width
+
+                LabelAndValue {
+                    width: parent.width
+                    label: "Fix"
+                    value: page.formatFix(PositionSensor.coordType)
                 }
-
-                text: qsTr("Coordinate format: ") + (decimalCoord ? qsTr("deg./min./sec.") : qsTr("decimal"))
-                onClicked: nextCoordFormat()
-            }
-            MenuItem {
-                function togglePositionLogging() {
-                    if(positionsensor.isLogging) {
-                        positionsensor.stopLogging();
-                    } else {
-                        positionsensor.startLogging();
-                    }
+                HorizontalSeparator {
+                    width: parent.width
                 }
-
-                text: qsTr("Position: ") + (positionsensor.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: togglePositionLogging()
+                LabelAndValue {
+                    width: parent.width
+                    label: "Latitude"
+                    value: page.formatCoordinate(PositionSensor.latitude, false)
+                }
+                HorizontalSeparator {
+                    width: parent.width
+                }
+                LabelAndValue {
+                    width: parent.width
+                    label: "Longitude"
+                    value: page.formatCoordinate(PositionSensor.longitude, true)
+                }
+                HorizontalSeparator {
+                    width: parent.width
+                }
+                LabelAndValue {
+                    width: parent.width
+                    label: "Altitude"
+                    value: page.formatAltitude(PositionSensor.altitude)
+                }
             }
         }
-*/
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
-        Column {
-            id: column
 
-            width: page.width
-            spacing: Theme.paddingLarge
+        GroupBox {
+            width: parent.width
+            title: "Accuracy"
 
-            GroupBox {
-                title: qsTr("WGS84 Coordinates")
+            Column {
                 width: parent.width
 
-                Column {
+                LabelAndValue {
                     width: parent.width
-                    spacing: Theme.paddingSmall
-
-                    Label {
-                        id: fixlabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Fix: ') + page.formatFix(positionsensor.coordType)
-                    }
-                    Label {
-                        id: latlabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Latitude: ') + page.formatCoordinate(positionsensor.latitude, false)
-                    }
-                    Label {
-                        id: lonlabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Longitude: ') + page.formatCoordinate(positionsensor.longitude, true)
-                    }
-                    Label {
-                        id: altlabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Altitude: ') + page.formatAltitude(positionsensor.altitude)
-                    }
+                    label: "Horizontal"
+                    value: page.formatMeters(PositionSensor.horzAccuracy)
+                }
+                HorizontalSeparator {
+                    width: parent.width
+                }
+                LabelAndValue {
+                    width: parent.width
+                    label: "Vertical"
+                    value: page.formatMeters(PositionSensor.vertAccuracy)
                 }
             }
-            GroupBox {
-                title: qsTr("Accuracy")
+        }
+
+        GroupBox {
+            width: parent.width
+            title: "Maidenhead Locator"
+
+            LabelAndValue {
                 width: parent.width
-
-                Column {
-                    width: parent.width
-                    spacing: Theme.paddingSmall
-
-                    Label {
-                        id: horzAccLabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Horizontal: ') + page.formatAccuracy(positionsensor.horzAccuracy)
-                    }
-                    Label {
-                        id: vertAccLabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Vertical: ') + page.formatAccuracy(positionsensor.vertAccuracy)
-                    }
-                }
+                label: "Grid"
+                value: PositionSensor.maidenhead !== "" ? PositionSensor.maidenhead : "–"
             }
-            GroupBox {
-                title: qsTr("Maidenhead Locator")
-                width: parent.width
+        }
 
-                Column {
-                    width: parent.width
-                    spacing: Theme.paddingSmall
+        GroupBox {
+            width: parent.width
+            title: "Format"
 
-                    Label {
-                        id: locatorLabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Grid: ') + '<b>' + positionsensor.maidenhead + '</b>'
-                    }
-                }
+            LabelAndSwitch {
+                label: "Degrees, minutes, seconds"
+                checked: !page.decimalCoord
+                onToggled: page.decimalCoord = !checked
             }
+        }
+
+        LoggingGroup {
+            sensor: PositionSensor
         }
     }
 }
-
-

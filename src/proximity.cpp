@@ -7,43 +7,56 @@ Proximity::Proximity(bool updateInternally, QObject *parent)
     : Sensor(Sensor::Proximity, parent)
 {
     m_sensor = new QProximitySensor(this);
-    m_logBaseName = "proximity";
+    m_logBaseName = QStringLiteral("proximity");
 
-    if(updateInternally) {
-        QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(refresh()));
+    initSensor(updateInternally);
+}
+
+QProximityReading *Proximity::currentReading() const
+{
+    // null until the backend delivered its first reading: before that the
+    // reading object exists but holds zeros, which plotted as a spike from 0
+    if(!haveReading()) {
+        return nullptr;
     }
 
-    QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(logValues()));
+    return static_cast<QProximitySensor*>(m_sensor)->reading();
 }
 
-Proximity::~Proximity()
+void Proximity::logValues()
 {
-}
-
-void Proximity::logValues(void)
-{
-    if(isLogging()) {
-        QProximitySensor *proximity = dynamic_cast<QProximitySensor*>(m_sensor);
-        QProximityReading *reading = proximity->reading();
-
-        QString line = QString("%1\t%2\n")
-                               .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
-                               .arg((int)(reading->close()));
-
-        m_logFile.write(line.toUtf8());
+    if(!isLogging()) {
+        return;
     }
+
+    QProximityReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
+
+    QString line = QStringLiteral("%1\t%2\n")
+                       .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
+                       .arg(int(reading->close()));
+
+    writeLogLine(line);
 }
 
-void Proximity::refresh(void)
+void Proximity::refresh()
 {
     if(!m_sensor->isActive()) {
         return;
     }
 
-    QProximitySensor *proximity = dynamic_cast<QProximitySensor*>(m_sensor);
-    QProximityReading *reading = proximity->reading();
+    QProximityReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
 
     m_detected = reading->close();
 
     emit detectedChanged();
+
+    emit readingUpdated();
 }

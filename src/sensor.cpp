@@ -1,7 +1,6 @@
 #include <QDebug>
-#include <QDateTime>
 
-#include "settings.h"
+#include "logfile.h"
 #include "wakelock.h"
 
 #include "sensor.h"
@@ -22,16 +21,37 @@ unsigned Sensor::sensorTypeToWakeLockPart(Sensor::Type type)
 }
 
 Sensor::Sensor(Sensor::Type type, QObject *parent) :
-    QObject(parent), m_sensor(NULL), m_type(type)
+    QObject(parent), m_type(type)
 {
 }
 
+void Sensor::initSensor(bool updateInternally)
+{
+    Q_ASSERT(m_sensor);
+
+    // Only tells whether the device has such a sensor at all; start() still
+    // decides whether it actually runs
+    m_available = m_sensor->connectToBackend();
+
+    if(!m_available) {
+        qWarning() << "No backend for" << m_sensor->type();
+    }
+
+    // Connected first, so refresh() and logValues() below see it already set
+    connect(m_sensor, &QSensor::readingChanged, this, [this]() { m_haveReading = true; });
+
+    if(updateInternally) {
+        connect(m_sensor, &QSensor::readingChanged, this, &Sensor::refresh);
+    }
+
+    connect(m_sensor, &QSensor::readingChanged, this, &Sensor::logValues);
+}
 
 void Sensor::activate(unsigned requestingPart)
 {
-    Activateable::activate(requestingPart);
-
     Q_ASSERT(m_sensor);
+
+    Activateable::activate(requestingPart);
 
     if(!m_sensor->isActive()) {
         qDebug() << "Sensor started";
@@ -55,31 +75,36 @@ void Sensor::deactivate(unsigned requestingPart)
     Activateable::deactivate(requestingPart);
 
     // stop the sensor if all parts are deactivated
-    if(!(this->isActive()) && m_sensor->isActive()) {
+    if(!isActive() && m_sensor->isActive()) {
         qDebug() << "Sensor stopped";
         m_sensor->stop();
+        // the next start must not plot the value from before as new
+        m_haveReading = false;
     }
 
-    if(requestingPart == PART_PAGE) {
+    // the wake lock parts are bits, so only release them with the last user
+    if(requestingPart == PART_PAGE && !isPartActive(PART_PAGE)) {
         WakeLock::instance().deactivateScreenLock(sensorTypeToWakeLockPart(m_type));
     }
 
-    if(requestingPart == PART_LOGGING) {
+    if(requestingPart == PART_LOGGING && !isPartActive(PART_LOGGING)) {
         WakeLock::instance().deactivateBackground(sensorTypeToWakeLockPart(m_type));
     }
 }
 
 void Sensor::startLogging()
 {
-    QDateTime now = QDateTime::currentDateTime();
+    if(isLogging()) {
+        return;
+    }
 
-    QString fileName = m_logBaseName + "_" + now.toString("yyyyMMdd-hhmmss") + ".csv";
-    QString absPath = QDir(Settings::instance().getLoggingPath()).filePath(fileName);
+    QString error;
 
-    qDebug() << "Starting to log at" << absPath;
-
-    m_logFile.setFileName(absPath);
-    m_logFile.open(QFile::WriteOnly);
+    if(!openNewLogFile(m_logFile, m_logBaseName, &error)) {
+        qWarning() << error;
+        emit loggingFailed(error);
+        return;
+    }
 
     activate(Activateable::PART_LOGGING);
 
@@ -88,6 +113,10 @@ void Sensor::startLogging()
 
 void Sensor::stopLogging()
 {
+    if(!isLogging()) {
+        return;
+    }
+
     deactivate(Activateable::PART_LOGGING);
 
     m_logFile.close();
@@ -95,7 +124,19 @@ void Sensor::stopLogging()
     emit isLoggingChanged(false);
 }
 
-bool Sensor::isLogging()
+bool Sensor::isLogging() const
 {
     return isPartActive(Activateable::PART_LOGGING);
+}
+
+QString Sensor::logFileName() const
+{
+    return isLogging() ? m_logFile.fileName() : QString();
+}
+
+void Sensor::writeLogLine(const QString &line)
+{
+    if(m_logFile.isOpen()) {
+        m_logFile.write(line.toUtf8());
+    }
 }

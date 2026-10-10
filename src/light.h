@@ -11,21 +11,24 @@ class Light : public Sensor
 
     Q_PROPERTY(qreal brightness READ brightness NOTIFY brightnessChanged)
 
-    private:
-        qreal m_brightness;
+private:
+    qreal m_brightness = 0;
 
-    public:
-        explicit Light(bool updateInternally = false, QObject *parent = NULL);
-        ~Light();
+    QLightReading *currentReading() const;
 
-        qreal brightness(void) const { return m_brightness; }
+public:
+    explicit Light(bool updateInternally = false, QObject *parent = nullptr);
 
-    public slots:
-        void refresh(void);
-        void logValues(void);
+    qreal brightness() const { return m_brightness; }
 
-    signals:
-        void brightnessChanged(void);
+public slots:
+    void refresh() override;
+
+protected slots:
+    void logValues() override;
+
+signals:
+    void brightnessChanged();
 };
 
 #endif // LIGHT_H

@@ -1,7 +1,4 @@
-#include <QStringList>
 #include <QDateTime>
-
-#include <qmath.h>
 
 #include "pressuresensor.h"
 
@@ -10,43 +7,56 @@ PressureSensor::PressureSensor(bool updateInternally, QObject *parent)
     : Sensor(Sensor::PressureSensor, parent)
 {
     m_sensor = new QPressureSensor(this);
-    m_logBaseName = "pressuresensor";
+    m_logBaseName = QStringLiteral("pressuresensor");
 
-    if(updateInternally) {
-        QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(refresh()));
+    initSensor(updateInternally);
+}
+
+QPressureReading *PressureSensor::currentReading() const
+{
+    // null until the backend delivered its first reading: before that the
+    // reading object exists but holds zeros, which plotted as a spike from 0
+    if(!haveReading()) {
+        return nullptr;
     }
 
-    QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(logValues()));
+    return static_cast<QPressureSensor*>(m_sensor)->reading();
 }
 
-PressureSensor::~PressureSensor()
+void PressureSensor::logValues()
 {
-}
-
-void PressureSensor::logValues(void)
-{
-    if(isLogging()) {
-        QPressureSensor *pressure = dynamic_cast<QPressureSensor*>(m_sensor);
-        QPressureReading *reading = pressure->reading();
-
-        QString line = QString("%1\t%2\n")
-                               .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
-                               .arg(reading->pressure());
-
-        m_logFile.write(line.toUtf8());
+    if(!isLogging()) {
+        return;
     }
+
+    QPressureReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
+
+    QString line = QStringLiteral("%1\t%2\n")
+                       .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
+                       .arg(reading->pressure());
+
+    writeLogLine(line);
 }
 
-void PressureSensor::refresh(void)
+void PressureSensor::refresh()
 {
     if(!m_sensor->isActive()) {
         return;
     }
 
-    QPressureSensor *pressure = dynamic_cast<QPressureSensor*>(m_sensor);
-    QPressureReading *reading = pressure->reading();
+    QPressureReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
 
     m_pressure = reading->pressure();
 
     emit pressureChanged();
+
+    emit readingUpdated();
 }

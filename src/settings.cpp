@@ -1,12 +1,6 @@
 #include "settings.h"
 
 Settings::Settings()
-    : QObject()
+    : QObject(), m_settings(QStringLiteral("bytewerk"), QStringLiteral("Messwerk"))
 {
-    m_settings = new QSettings("bytewerk", "Messwerk");
-}
-
-Settings::~Settings()
-{
-    delete m_settings;
 }

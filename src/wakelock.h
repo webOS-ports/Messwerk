@@ -11,7 +11,7 @@ private:
     unsigned m_backgroundParts;
     unsigned m_screenLockParts;
 
-    WakeLock(void);
+    WakeLock();
 
 public:
     static const unsigned PART_ACCELEROMETER = (1 << 0);
@@ -24,7 +24,7 @@ public:
     static const unsigned PART_POSITION      = (1 << 7);
     static const unsigned PART_PRESSURESENSOR= (1 << 8);
 
-    ~WakeLock();
+    ~WakeLock() override;
 
     static WakeLock& instance()
     {
@@ -34,14 +34,14 @@ public:
 
     virtual void activateBackground(unsigned requestingPart);
     virtual void deactivateBackground(unsigned requestingPart);
-    virtual void forceDeactivateBackground(void);
+    virtual void forceDeactivateBackground();
 
     virtual void activateScreenLock(unsigned requestingPart);
     virtual void deactivateScreenLock(unsigned requestingPart);
-    virtual void forceDeactivateScreenLock(void);
+    virtual void forceDeactivateScreenLock();
 
 public slots:
-    void debugState(void);
+    void debugState();
 };
 
 #endif // WAKELOCK_H

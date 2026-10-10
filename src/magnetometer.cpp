@@ -1,7 +1,5 @@
 #include <QDateTime>
 
-#include <qmath.h>
-
 #include "magnetometer.h"
 
 
@@ -9,52 +7,64 @@ Magnetometer::Magnetometer(bool updateInternally, QObject *parent)
     : Sensor(Sensor::Magnetometer, parent)
 {
     m_sensor = new QMagnetometer(this);
-    m_logBaseName = "magnetometer";
+    m_logBaseName = QStringLiteral("magnetometer");
 
-    if(updateInternally) {
-        QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(refresh()));
+    initSensor(updateInternally);
+}
+
+QMagnetometerReading *Magnetometer::currentReading() const
+{
+    // null until the backend delivered its first reading: before that the
+    // reading object exists but holds zeros, which plotted as a spike from 0
+    if(!haveReading()) {
+        return nullptr;
     }
 
-    QObject::connect(m_sensor, SIGNAL(readingChanged()), this, SLOT(logValues()));
+    return static_cast<QMagnetometer*>(m_sensor)->reading();
 }
 
-Magnetometer::~Magnetometer()
+void Magnetometer::logValues()
 {
-}
-
-void Magnetometer::logValues(void)
-{
-    if(isLogging()) {
-        QMagnetometer *magnetometer = dynamic_cast<QMagnetometer*>(m_sensor);
-        QMagnetometerReading *reading = magnetometer->reading();
-
-        QString line = QString("%1\t%2\t%3\t%4\n")
-                               .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
-                               .arg(reading->x())
-                               .arg(reading->y())
-                               .arg(reading->z());
-
-        m_logFile.write(line.toUtf8());
+    if(!isLogging()) {
+        return;
     }
+
+    QMagnetometerReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
+
+    QString line = QStringLiteral("%1\t%2\t%3\t%4\n")
+                       .arg(QDateTime::currentMSecsSinceEpoch()/1000.0, 0, 'f', 3)
+                       .arg(reading->x())
+                       .arg(reading->y())
+                       .arg(reading->z());
+
+    writeLogLine(line);
 }
 
-void Magnetometer::refresh(void)
+void Magnetometer::refresh()
 {
     if(!m_sensor->isActive()) {
         return;
     }
 
-    QMagnetometer *magnetometer = dynamic_cast<QMagnetometer*>(m_sensor);
-    QMagnetometerReading *reading = magnetometer->reading();
+    QMagnetometerReading *reading = currentReading();
+
+    if(!reading) {
+        return;
+    }
 
     m_mx = reading->x();
     m_my = reading->y();
     m_mz = reading->z();
-
     m_precision = reading->calibrationLevel();
 
     emit mxChanged();
     emit myChanged();
     emit mzChanged();
     emit precisionChanged();
+
+    emit readingUpdated();
 }

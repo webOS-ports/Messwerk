@@ -9,35 +9,38 @@ class Magnetometer : public Sensor
 {
     Q_OBJECT
 
-    Q_PROPERTY(qreal mx READ mx NOTIFY mxChanged)
-    Q_PROPERTY(qreal my READ my NOTIFY myChanged)
-    Q_PROPERTY(qreal mz READ mz NOTIFY mzChanged)
+    Q_PROPERTY(qreal mx        READ mx        NOTIFY mxChanged)
+    Q_PROPERTY(qreal my        READ my        NOTIFY myChanged)
+    Q_PROPERTY(qreal mz        READ mz        NOTIFY mzChanged)
     Q_PROPERTY(qreal precision READ precision NOTIFY precisionChanged)
 
-    private:
-        qreal m_mx;
-        qreal m_my;
-        qreal m_mz;
-        qreal m_precision;
+private:
+    qreal m_mx = 0;
+    qreal m_my = 0;
+    qreal m_mz = 0;
+    qreal m_precision = 0;
 
-    public:
-        explicit Magnetometer(bool updateInternally = false, QObject *parent = NULL);
-        ~Magnetometer();
+    QMagnetometerReading *currentReading() const;
 
-        qreal mx(void) const { return m_mx; }
-        qreal my(void) const { return m_my; }
-        qreal mz(void) const { return m_mz; }
-        qreal precision(void) const { return m_precision; }
+public:
+    explicit Magnetometer(bool updateInternally = false, QObject *parent = nullptr);
 
-    public slots:
-        void refresh(void);
-        void logValues(void);
+    qreal mx() const { return m_mx; }
+    qreal my() const { return m_my; }
+    qreal mz() const { return m_mz; }
+    qreal precision() const { return m_precision; }
 
-    signals:
-        void mxChanged(void);
-        void myChanged(void);
-        void mzChanged(void);
-        void precisionChanged(void);
+public slots:
+    void refresh() override;
+
+protected slots:
+    void logValues() override;
+
+signals:
+    void mxChanged();
+    void myChanged();
+    void mzChanged();
+    void precisionChanged();
 };
 
 #endif // MAGNETOMETER_H

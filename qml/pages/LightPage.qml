@@ -1,123 +1,88 @@
+/*
+ * (c) 2026 Herman van Hazendonk <github.com@herrie.org>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 3, as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranties of
+ * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 import QtQuick 2.9
-import QtQuick.Controls 2.9
-import harbour.messwerk.MesswerkWidgets 1.0
+import QtQuick.Controls 2.2
+
+import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
-import "CustomTheme"
+import "../Common"
 
 BasePage {
     id: page
-    headerText: "Light & Proximity"
 
-    function formatNumber(n) {
-        return '<b>' + n.toFixed(3) + ' Lux</b>';
-    }
-
-    function updateBrightnessPlot() {
-        bplot.addValue(lightsensor.brightness);
-        bplot.update();
+    title: "Light & Proximity"
+    explanation: {
+        if (!LightSensor.available && !ProximitySensor.available)
+            return "This device has neither a light nor a proximity sensor.";
+        if (!LightSensor.available)
+            return "This device has no light sensor.";
+        if (!ProximitySensor.available)
+            return "This device has no proximity sensor.";
+        return "";
     }
 
     Component.onCompleted: {
-        lightsensor.activate(Constants.PART_PAGE);
-        lightsensor.brightnessChanged.connect(updateBrightnessPlot);
-
-        proximitysensor.activate(Constants.PART_PAGE);
+        LightSensor.activate(Constants.PART_PAGE);
+        ProximitySensor.activate(Constants.PART_PAGE);
     }
     Component.onDestruction: {
-        lightsensor.deactivate(Constants.PART_PAGE);
-        lightsensor.brightnessChanged.disconnect(updateBrightnessPlot);
-
-        proximitysensor.deactivate(Constants.PART_PAGE);
+        LightSensor.deactivate(Constants.PART_PAGE);
+        ProximitySensor.deactivate(Constants.PART_PAGE);
     }
 
-    // To enable PullDownMenu, place our content in a SilicaFlickable
-    Flickable {
-        anchors.fill: parent
+    Connections {
+        target: LightSensor
+        function onReadingUpdated() {
+            brightnessRow.addValue(LightSensor.brightness);
+        }
+    }
 
-        contentHeight: column.height
-        // cut out-of-bound graphics
-        clip: true
-/*
-        PullDownMenu {
-            MenuItem {
-                function toggleLightLogging() {
-                    if(lightsensor.isLogging) {
-                        lightsensor.stopLogging();
-                    } else {
-                        lightsensor.startLogging();
-                    }
-                }
+    SettingsPageContent {
+        GroupBox {
+            width: parent.width
+            title: "Light"
 
-                text: qsTr("Light sensor: ") + (lightsensor.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: toggleLightLogging()
-            }
-            MenuItem {
-                function toggleProximityLogging() {
-                    if(proximitysensor.isLogging) {
-                        proximitysensor.stopLogging();
-                    } else {
-                        proximitysensor.startLogging();
-                    }
-                }
-
-                text: qsTr("Proximity sensor: ") + (proximitysensor.isLogging ? qsTr("Stop") : qsTr("Start")) + qsTr(" logging")
-                onClicked: toggleProximityLogging()
+            PlotRow {
+                id: brightnessRow
+                label: "Illuminance"
+                value: LightSensor.brightness.toFixed(1) + " lx"
             }
         }
-*/
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
-        Column {
-            id: column
 
-            width: page.width
-            spacing: Theme.paddingLarge
+        GroupBox {
+            width: parent.width
+            title: "Proximity"
 
-            GroupBox {
-                title: qsTr("Brightness")
+            LabelAndValue {
                 width: parent.width
-                Column {
-                    width: parent.width
-                    spacing: Theme.paddingSmall
+                label: "Object near the screen"
+                value: ProximitySensor.detected ? "Yes" : "No"
+            }
+        }
 
-                    Label {
-                        id: blabel
-                        font.pixelSize: Theme.fontSizeLarge
-                        anchors.right: parent.right
-                        anchors.rightMargin: Theme.paddingLarge
-                        text: qsTr('Brightness: ') + page.formatNumber(lightsensor.brightness)
-                    }
-                    PlotWidget {
-                        id: bplot
-                        width: parent.width
-                        height: 150
-                        plotColor: Theme.highlightColor
-                        scaleColor: Theme.secondaryHighlightColor
-                    }
-                }
-            }
-            GroupBox {
-                title: qsTr("Proximity")
-                width: parent.width
-                Label {
-                    id: proximityLabel
-                    font.pixelSize: Theme.fontSizeLarge
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    font.bold: proximitysensor.detected
-                    font.strikeout: !proximitysensor.detected
-                    color: {
-                        if(proximitysensor.detected) {
-                            return Theme.highlightColor;
-                        } else {
-                            return Theme.secondaryColor;
-                        }
-                    }
-                    text: qsTr('Proximity detected')
-                }
-            }
+        LoggingGroup {
+            title: "Light sensor logging"
+            sensor: LightSensor
+        }
+
+        LoggingGroup {
+            title: "Proximity sensor logging"
+            sensor: ProximitySensor
         }
     }
 }
-
-
