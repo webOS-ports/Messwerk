@@ -55,7 +55,7 @@ Column {
         height: Units.gu(12)
 
         plotColor: "#2071bb"
-        scaleColor: "#ADADAD"
-        textColor: "#666666"
+        scaleColor: Colors.ruleDark
+        textColor: Colors.secondaryText
     }
 }

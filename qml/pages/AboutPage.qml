@@ -23,7 +23,7 @@ import QtQuick.Controls.LuneOS 2.0
 import "../Common"
 import LuneOS.Forms 1.0
 
-BasePage {
+AppPage {
     id: page
 
     title: "About"

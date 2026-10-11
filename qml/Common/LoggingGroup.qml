@@ -79,7 +79,7 @@ GroupBox {
                     return "Writing to " + loggingGroup.sensor.logFileName + ". Logging carries on after you leave this page.";
                 return "Writes the values to a new CSV file in " + MesswerkSettings.loggingPath + ".";
             }
-            color: loggingGroup._error !== "" ? "#be0003" : "#666666"
+            color: loggingGroup._error !== "" ? Colors.error : Colors.secondaryText
         }
     }
 }

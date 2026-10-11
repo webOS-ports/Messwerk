@@ -27,7 +27,7 @@ import "../Constants.js" as Constants
 import "../Common"
 import LuneOS.Forms 1.0
 
-BasePage {
+AppPage {
     id: page
 
     title: "GNSS Satellites"
@@ -64,8 +64,8 @@ BasePage {
 
                     visibleColor: "#4b4b4b"
                     usedColor: "#2071bb"
-                    scaleColor: "#ADADAD"
-                    northColor: "#be0003"
+                    scaleColor: Colors.ruleDark
+                    northColor: Colors.error
                 }
                 HorizontalSeparator {
                     width: parent.width
@@ -98,7 +98,7 @@ BasePage {
 
                 visibleColor: "#4b4b4b"
                 usedColor: "#2071bb"
-                scaleColor: "#ADADAD"
+                scaleColor: Colors.ruleDark
             }
         }
 

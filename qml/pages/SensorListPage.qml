@@ -22,7 +22,7 @@ import harbour.messwerk.Sensors 1.0
 import "../Common"
 import LuneOS.Forms 1.0
 
-BasePage {
+AppPage {
     id: page
 
     title: "Messwerk"
@@ -59,7 +59,7 @@ BasePage {
                         entry: modelData
                         rowIndex: index
                         rowCount: page.sensorPages.length
-                        onClicked: pageStack.push(Qt.resolvedUrl(entry.page))
+                        onClicked: page.StackView.view.push(Qt.resolvedUrl(entry.page))
                     }
                 }
             }
@@ -79,7 +79,7 @@ BasePage {
                         entry: modelData
                         rowIndex: index
                         rowCount: page.appPages.length
-                        onClicked: pageStack.push(Qt.resolvedUrl(entry.page))
+                        onClicked: page.StackView.view.push(Qt.resolvedUrl(entry.page))
                     }
                 }
             }

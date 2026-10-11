@@ -37,7 +37,6 @@ SOURCES += src/Messwerk.cpp \
 
 QML_FILES = qml/Messwerk.qml \
     qml/Constants.js \
-    qml/Common/BasePage.qml \
     qml/Common/LoggingGroup.qml \
     qml/Common/PlotRow.qml \
     qml/pages/SensorListPage.qml \

@@ -22,7 +22,7 @@ import harbour.messwerk.Sensors 1.0
 import "../Common"
 import LuneOS.Forms 1.0
 
-BasePage {
+AppPage {
     id: page
 
     title: "Settings"
