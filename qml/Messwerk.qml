@@ -20,6 +20,7 @@ import QtQuick.Controls 2.2
 import Eos.Window 0.1
 // Units & font sizes
 import LunaNext.Common 0.1
+import LuneOS.Forms 1.0
 
 WebOSWindow {
     id: appWindow
@@ -46,6 +47,9 @@ WebOSWindow {
         // The settings apps' header height, less of it on a phone's width or
         // a short screen like the Q25's square
         height: (appWindow.height < Units.gu(70) || appWindow.width < Units.gu(50)) ? Units.gu(7.5) : Units.gu(10)
+
+        icon: Qt.resolvedUrl("../harbour-messwerk.png")
+        compact: width < Units.gu(50)
 
         title: pageStack.currentItem && pageStack.currentItem.title ? pageStack.currentItem.title : "Messwerk"
         actionComponent: pageStack.currentItem ? pageStack.currentItem.headerAction : null

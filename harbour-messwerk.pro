@@ -36,18 +36,10 @@ SOURCES += src/Messwerk.cpp \
     src/logfile.cpp
 
 QML_FILES = qml/Messwerk.qml \
-    qml/AppHeader.qml \
     qml/Constants.js \
-    qml/images/toolbar-light.png \
     qml/Common/BasePage.qml \
-    qml/Common/ExplanationText.qml \
-    qml/Common/HorizontalSeparator.qml \
-    qml/Common/LabelAndSwitch.qml \
-    qml/Common/LabelAndTextField.qml \
-    qml/Common/LabelAndValue.qml \
     qml/Common/LoggingGroup.qml \
     qml/Common/PlotRow.qml \
-    qml/Common/SettingsPageContent.qml \
     qml/pages/SensorListPage.qml \
     qml/pages/PageRow.qml \
     qml/pages/PositionPage.qml \

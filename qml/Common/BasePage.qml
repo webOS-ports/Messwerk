@@ -19,6 +19,7 @@ import QtQuick.Controls 2.2
 
 // Units
 import LunaNext.Common 0.1
+import LuneOS.Forms 1.0
 
 /*
  * What every page is built on, after the settings apps' BasePage: the grey

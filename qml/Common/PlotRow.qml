@@ -20,6 +20,7 @@ import QtQuick 2.9
 import LunaNext.Common 0.1
 
 import harbour.messwerk.MesswerkWidgets 1.0
+import LuneOS.Forms 1.0
 
 /*
  * One measured quantity: its name and current value as a LabelAndValue row,
