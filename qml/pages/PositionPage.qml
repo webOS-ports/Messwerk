@@ -21,8 +21,9 @@ import harbour.messwerk.Sensors 1.0
 
 import "../Constants.js" as Constants
 import "../Common"
+import LuneOS.Forms 1.0
 
-BasePage {
+AppPage {
     id: page
 
     title: "Position"

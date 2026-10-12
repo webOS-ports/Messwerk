@@ -18,6 +18,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 
 import harbour.messwerk.Sensors 1.0
+import LuneOS.Forms 1.0
 
 /*
  * Recording a sensor to a CSV file: one switch, and a line saying where the
@@ -78,7 +79,7 @@ GroupBox {
                     return "Writing to " + loggingGroup.sensor.logFileName + ". Logging carries on after you leave this page.";
                 return "Writes the values to a new CSV file in " + MesswerkSettings.loggingPath + ".";
             }
-            color: loggingGroup._error !== "" ? "#be0003" : "#666666"
+            color: loggingGroup._error !== "" ? Colors.error : Colors.secondaryText
         }
     }
 }

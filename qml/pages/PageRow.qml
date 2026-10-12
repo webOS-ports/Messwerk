@@ -22,6 +22,7 @@ import QtQuick.Layouts 1.3
 import LunaNext.Common 0.1
 // ListDelegateSeparator
 import LuneOS.Components 1.0
+import LuneOS.Forms 1.0
 
 /*
  * One row of the start page: a page's title, and on the right whether it is
@@ -64,14 +65,14 @@ ItemDelegate {
             Layout.fillWidth: true
             text: row.entry.title
             elide: Text.ElideRight
-            color: row.available ? "#2a2929" : "#888888"
+            color: row.available ? Colors.text : "#888888"
             font.pixelSize: FontUtils.sizeToPixels("medium")
         }
 
         Label {
             visible: text !== ""
             text: row.logging ? "Logging" : (row.available ? "" : "Not available")
-            color: row.logging ? "#be0003" : "#555555"
+            color: row.logging ? Colors.error : "#555555"
             font.pixelSize: FontUtils.sizeToPixels("small")
             font.bold: row.logging
         }

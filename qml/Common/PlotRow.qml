@@ -20,6 +20,7 @@ import QtQuick 2.9
 import LunaNext.Common 0.1
 
 import harbour.messwerk.MesswerkWidgets 1.0
+import LuneOS.Forms 1.0
 
 /*
  * One measured quantity: its name and current value as a LabelAndValue row,
@@ -54,7 +55,7 @@ Column {
         height: Units.gu(12)
 
         plotColor: "#2071bb"
-        scaleColor: "#ADADAD"
-        textColor: "#666666"
+        scaleColor: Colors.ruleDark
+        textColor: Colors.secondaryText
     }
 }
